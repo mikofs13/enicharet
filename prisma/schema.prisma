@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AuctionStatus {
+  DRAFT
+  SCHEDULED
+  OPEN
+  CLOSING
+  AWAITING_PAYMENT
+  WINNER_CONFIRMED
+  REFUNDING
+  CANCELLED
+  FULFILLED
+}
+
+model User {
+  id                  String     @id @default(cuid())
+  email               String?    @unique
+  phoneNumber         String?    @unique(map: "User_phone_key") @map("phone")
+  phoneNumberVerified Boolean    @default(false)
+  name                String?
+  emailVerified       Boolean    @default(false)
+  image               String?
+  role                UserRole   @default(USER)
+  status              UserStatus @default(ACTIVE)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+  sessions            Session[]
+  accounts            Account[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model Auction {
+  id                   String         @id @default(cuid())
+  slug                 String         @unique
+  title                String
+  description          String
+  status               AuctionStatus  @default(DRAFT)
+  // All monetary amounts are integer hundredths of a birr.
+  entryFeeMinor        Int
+  maxBidsPerUser       Int?
+  paymentWindowSeconds Int
+  opensAt              DateTime       @db.Timestamptz(3)
+  closesAt             DateTime       @db.Timestamptz(3)
+  createdAt            DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
+  images               AuctionImage[]
+
+  @@index([status, opensAt])
+  @@index([status, closesAt])
+}
+
+model AuctionImage {
+  id        String  @id @default(cuid())
+  auctionId String
+  url       String
+  alt       String
+  position  Int     @default(0)
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, position])
+}
