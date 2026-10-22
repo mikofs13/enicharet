@@ -19,7 +19,7 @@ async function AccountContent() {
         <div><dt>Account type</dt><dd>{user.role === "ADMIN" ? "Administrator" : "Member"}</dd></div>
         <div><dt>Status</dt><dd><span className="status-dot" />Active</dd></div>
       </dl>
-      <section className="next-section"><p className="eyebrow">Up next</p><h2>A place for your possibilities.</h2><p>Prize auctions and your wallet are coming soon. You can already manage access to your account by logging out when you finish.</p></section>
+      <section className="next-section"><p className="eyebrow">Explore</p><h2>A place for your possibilities.</h2><p>Browse published prizes and review their entry rules. Your wallet and bid submission are coming next.</p><Link className="text-link" href="/prizes">Browse prizes →</Link></section>
       {user.role === "ADMIN" && <Link className="button" href="/admin">Open administration <span aria-hidden="true">↗</span></Link>}
     </main>
   </>;

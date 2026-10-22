@@ -1,0 +1,39 @@
+.auction-page { width: min(1184px, calc(100% - 96px)); margin: 48px auto 80px; }
+.auction-page.narrow { max-width: 820px; }
+.page-heading { margin: 40px 0; }
+.page-heading h1, .desk-heading h1 { font-size: clamp(2.5rem, 5vw, 4rem); }
+.desk-heading { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin: 40px 0; }
+.desk-heading h1 { margin-bottom: 0; }
+.prize-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.prize-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 150ms; }
+.prize-card:hover { border-color: var(--accent); }
+.prize-image { position: relative; aspect-ratio: 4/3; background: var(--surface); overflow: hidden; border-radius: 6px; }
+.prize-image img { object-fit: contain; }
+.prize-placeholder { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
+.prize-placeholder > span { font-size: 6rem; letter-spacing: -.1em; font-weight: 800; color: var(--accent); }
+.prize-placeholder small { font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase; }
+.prize-card-copy { padding: 24px; }
+.prize-card h2 { font-size: 1.5rem; margin: 18px 0 12px; overflow-wrap: anywhere; }
+.prize-card p { color: var(--muted); font-size: .875rem; }
+.auction-status { color: var(--accent); font-size: .6875rem; text-transform: uppercase; letter-spacing: .12em; }
+.empty-state, .notice, .publish-panel { background: var(--surface); border: 1px solid var(--border); padding: 32px; border-radius: 6px; }
+.empty-state p, .publish-panel p, .notice p { color: var(--muted); }
+.publish-panel { margin-top: 48px; }
+.publish-panel .form-error { margin: 20px 0 0; }
+.auction-list > a { display: flex; gap: 24px; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 26px 0; }
+.auction-list > a:hover h2 { text-decoration: underline; text-underline-offset: 5px; }
+.auction-list h2 { margin: 12px 0 8px; overflow-wrap: anywhere; }
+.auction-list p { color: var(--muted); margin: 0; font-size: .875rem; }
+.pagination { display: flex; gap: 24px; justify-content: center; align-items: center; margin-top: 40px; color: var(--muted); font-size: .875rem; }
+.prize-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 32px; }
+.prize-detail h1 { font-size: clamp(2rem, 4vw, 3.5rem); overflow-wrap: anywhere; }
+.prize-description { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+.prize-detail .account-details { margin: 28px 0; }
+.notice { padding: 22px; }
+.notice p { margin: 8px 0 0; font-size: .875rem; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+.field textarea { display: block; width: 100%; padding: 14px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 4px; font: inherit; resize: vertical; }
+.field-error { color: var(--error); margin: 8px 0 0; font-size: .8125rem; }
+.field [aria-invalid="true"] { border-color: var(--error); }
+@media(max-width: 950px) { .prize-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prize-detail { gap: 32px; } }
+@media(max-width: 740px) { .auction-page { width: calc(100% - 48px); margin-top: 24px; } .prize-grid, .prize-detail, .form-grid { grid-template-columns: 1fr; } .desk-heading { align-items: flex-start; flex-direction: column; } .site-header { flex-wrap: wrap; } .site-header nav { flex-wrap: wrap; } .empty-state, .publish-panel { padding: 24px; } }

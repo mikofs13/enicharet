@@ -17,6 +17,7 @@
     "user:admin": "tsx scripts/make-admin.ts",
     "test:auth": "node --conditions=react-server --import tsx scripts/test-auth.ts",
     "test:sms": "tsx --test scripts/sms.test.ts",
+    "test:auctions": "tsx --test scripts/auctions.test.ts && node --conditions=react-server --import tsx scripts/test-auctions.ts",
     "sms:inbox": "tsx scripts/sms-inbox.ts"
   },
   "dependencies": {

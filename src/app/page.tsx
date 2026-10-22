@@ -14,7 +14,7 @@ export default function Home() {
         <li><span>02</span><h2>Stand alone.</h2><p>Matching amounts are excluded. Lowest unique comes first.</p></li>
         <li><span>03</span><h2>Claim your possibility.</h2><p>Only the winner pays their bid amount, within the payment deadline.</p></li>
       </ol>
-      <p className="availability-note">We’re getting ready. Create an account now; prize auctions are coming soon.</p>
+      <p className="availability-note">Explore published prizes and their rules. Bid submission is coming next.</p><Link className="text-link" href="/prizes">Browse prizes →</Link>
     </main>
     <footer className="site-footer">Enicharet <span>A little strategy. A little luck.</span></footer>
   </>;

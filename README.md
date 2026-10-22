@@ -221,8 +221,36 @@ host, and add cleanup for expired sessions, verification and rate-limit records.
 Further launch work includes account recovery, phone-change handling and additional
 administrator protection. Phone changes are not offered in this first UI.
 
-Next: auction creation and prize browsing, then a test-money wallet, bidding, and
-settlement. Payments and background jobs are not implemented yet.
+## Prize management and browsing
+
+Administrators can open `/admin/auctions`, create a private draft, edit its details,
+and publish it. Configure the entry fee in birr, optional per-person bid limit,
+opening/closing dates, winner payment window (1–720 hours), and an optional HTTPS
+image URL with alternative text. The editor uses Ethiopian time (UTC+3), regardless
+of the administrator's device time zone. The database stores UTC timestamps.
+
+Publishing requires a future opening time and locks the prize's details. Unsaved
+changes must be saved before publishing. Concurrent edits use the saved revision;
+stale requests receive HTTP 409. Published prizes appear at `/prizes` and
+`/prizes/[slug]`; drafts are excluded from public pages and APIs. Listings paginate
+12 items at a time. Displayed upcoming/open/closed phases are derived from server
+time on each request; automatic lifecycle transitions and bid submission come later.
+An “Open” date phase does not enable bidding in this milestone.
+
+The API lives under `/api/v1/auctions` (public reads) and
+`/api/v1/admin/auctions` (admin reads/creation), with `GET`/`PATCH` on `/:id` and
+`POST` on `/:id/publish`. Writes require an active admin session, same-origin JSON,
+and `updatedAt` for edits/publishing. Set `BETTER_AUTH_URL` to the exact app origin.
+Fees use integer minor units in storage. Images use administrator-supplied URLs;
+file uploads are not implemented yet. No database migration is needed for this stage.
+
+Run `npm run test:auctions` for validation/time conversion tests and database-backed
+API checks. Integration checks use temporary fictional users, local OTP delivery,
+and temporary prizes, then remove those records. They do not send real SMS or
+change `.env.local`. Use a development database, as with the auth tests above.
+
+Next: a test-money wallet, bidding, and settlement. Deposits, withdrawals, live
+payments, background jobs, and winner selection are not implemented yet.
 
 ## Dependency notes
 
