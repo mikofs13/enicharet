@@ -7,3 +7,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Project handoff
+
+Read `PROJECT.md`, `PROGRESS.md`, and `README.md` before implementation work.
+`PROJECT.md` records product requirements and architecture; `PROGRESS.md` records
+completed work, limitations, verification, and the next milestone. Verify these
+against the source, and update progress after completing a milestone. Keep secrets,
+real phone numbers, OTPs, and session cookies out of documentation.

@@ -2,6 +2,9 @@
 
 A web-first lowest unique bid auction application.
 
+For the complete project description, read [PROJECT.md](PROJECT.md). For completed
+work, known limitations, and the next milestone, read [PROGRESS.md](PROGRESS.md).
+
 ## Local development
 
 Use Node.js 24 LTS and npm.
@@ -12,7 +15,8 @@ npm run db:generate
 npm run dev
 ```
 
-Open http://localhost:3000. The home page currently uses the Next.js starter.
+Open http://localhost:3000. The app includes phone OTP accounts, administrator
+prize management, public prize browsing, a test-money wallet, and private test bids.
 
 ## Verification
 
@@ -26,14 +30,15 @@ Run `npm start` after a successful build to serve the production application.
 
 ## Project structure
 
-- `src/app`: Pages, layouts, and future API route handlers.
+- `src/app`: Pages, layouts, and API route handlers.
 - `src/modules`: Domain services, validation, and database queries.
 - `src/components`: Shared UI components.
 - `src/lib`: Shared database, authentication, and configuration infrastructure.
 - `src/worker`: Future background job entry point.
 
 Keep business rules inside modules so API routes and workers can share them.
-Modules are placeholders, ready for implementation.
+Accounts, auctions, the test-money wallet, and test bidding are implemented; real
+payments, winner selection, and settlement remain future work.
 
 ## Auction rules
 
@@ -138,7 +143,9 @@ carrier coverage with the provider before enabling additional number ranges.
 
 Reference: [API v2](https://smsethiopia.com/#/landing/docs/api-v2),
 [provider errors](https://smsethiopia.com/#/landing/docs/errors).
-The API key and live handset delivery have not been verified during setup.
+The owner confirmed receiving a real test SMS during integration troubleshooting.
+This verifies that delivery worked at that time; it does not establish ongoing
+provider availability or unrestricted production recipient coverage.
 
 ### Local development messages
 
@@ -235,7 +242,7 @@ stale requests receive HTTP 409. Published prizes appear at `/prizes` and
 `/prizes/[slug]`; drafts are excluded from public pages and APIs. Listings paginate
 12 items at a time. Displayed upcoming/open/closed phases are derived from server
 time on each request; automatic lifecycle transitions and bid submission come later.
-An “Open” date phase does not enable bidding in this milestone.
+Open prizes now accept test-money bids through the bidding service described below.
 
 The API lives under `/api/v1/auctions` (public reads) and
 `/api/v1/admin/auctions` (admin reads/creation), with `GET`/`PATCH` on `/:id` and
@@ -244,13 +251,125 @@ and `updatedAt` for edits/publishing. Set `BETTER_AUTH_URL` to the exact app ori
 Fees use integer minor units in storage. Images use administrator-supplied URLs;
 file uploads are not implemented yet. No database migration is needed for this stage.
 
+The first collection contains an iPhone 16 Pro, Galaxy S24 Ultra, Toyota Corolla,
+necklace/bracelet set, and MacBook Air. They are persistent published catalog
+listings, with specifications and fulfillment still to be confirmed. Only TEST
+funds can be used; real payments remain unavailable. To populate the collection in another
+database, explicitly run:
+
+```sh
+npm run db:seed:auctions -- --preview
+npm run db:seed:auctions
+```
+
+This command preserves existing listings and dates on reruns. New listings open
+roughly one day after execution for seven days. See `PROGRESS.md` for the first
+collection's actual dates, fees, limits, and payment windows.
+
 Run `npm run test:auctions` for validation/time conversion tests and database-backed
 API checks. Integration checks use temporary fictional users, local OTP delivery,
 and temporary prizes, then remove those records. They do not send real SMS or
 change `.env.local`. Use a development database, as with the auth tests above.
 
-Next: a test-money wallet, bidding, and settlement. Deposits, withdrawals, live
-payments, background jobs, and winner selection are not implemented yet.
+## Test-money wallet
+
+`/wallet` shows the signed-in member's test balance and cursor-paginated history.
+`GET /api/v1/wallet` returns `{ wallet: { mode: "TEST", currency: "ETB",
+balanceMinor: "..." } }`. `GET /api/v1/wallet/transactions?before=...` returns
+`items` and `nextCursor`. Both require an active verified phone session, scope data
+to that session's user, and send private/no-store headers. JSON money uses string
+minor units; 10001 means 100.01 birr. No public money-write endpoint exists.
+
+Migration `20261022000100_test_wallet` adds two tables and database guards:
+`WalletAccount` holds test accounts/balance projections; each `WalletTransfer`
+records both debit and credit sides. SQL triggers atomically update balances,
+prevent user overdrafts, and reject direct balance edits or ledger mutations.
+Corrections require an exact reversing transfer; an original can be reversed only
+once. Historical account ownership is retained with restrictive foreign keys.
+Production database roles must be restricted before live payments; a database
+owner can bypass database protections. This is not a tamper-proof ledger.
+
+After a schema/client update, restart your existing development server so it loads
+the new Prisma models. Add funds only to an existing verified account locally:
+
+```sh
+npm run wallet:credit:test -- "YOUR_PHONE_NUMBER" "100.00" "test-credit-0001"
+npm run wallet:check
+npm run test:wallet
+```
+
+The reference must be 8–100 letters, digits, dots, colons, underscores, or hyphens.
+Reusing it with the same account, amount, direction, and description returns the
+original transfer without posting again. Changed details produce a conflict. Use
+a different reference for an intentionally new credit. The command defaults to
+local development only when `NODE_ENV` is unset and refuses production, CI, or
+Vercel environments. It has no HTTP equivalent. Never treat this as a deposit.
+
+The test wallet uses ETB exclusively and has no cash value. Available balances use
+`BIGINT`, remain nonnegative, and cap at 9,000,000,000,000,000 minor units. The
+offsetting test-clearing account can be negative. The TypeScript target is ES2020
+to support native exact `bigint`. All money formatting avoids floating point.
+
+`wallet:check` independently compares all projections with ledger movements and
+checks that all balances net to zero, without printing customer balances.
+`test:wallet` uses a freshly generated `wallet_test_<uuid>` schema, applies the
+existing migrations there, runs real auth/API/service checks using local OTPs,
+then drops only that disposable schema. It uses `DIRECT_URL` or derives Neon's
+direct hostname because pooled connections reject the schema search-path option.
+The database role needs schema-creation privileges for these tests. App tables,
+existing wallets, and real SMS are not used. Never delete app ledger history to
+clean up a test; use the isolated test harness.
+
+## Test-money bidding
+
+On an open prize's detail page, active verified members can submit a bid using
+their TEST wallet. The server charges only the fixed entry fee, never the proposed
+bid amount. `/bids` and `GET /api/v1/bids?before=...` show only the member's own
+bid history, 20 records per page. Other amounts and uniqueness status are private.
+
+`POST /api/v1/auctions/[slug]/bids` accepts exactly:
+
+```json
+{ "amount": "1.25", "reference": "unique-request-reference" }
+```
+
+Minimum 1.00 birr, at most two decimal places, maximum 21,474,836.47 birr. Repeating
+your own amount on the same auction is rejected; another user may submit it.
+The request reference follows the wallet's 8–100 character format and is scoped
+to the member. Reusing it with the same auction/amount confirms the original bid
+without charging again, even after closing. Changing the details returns 409.
+The browser retains the same reference on uncertain failures and locks the amount
+while offering a retry. The database uniqueness rule also prevents an accidental
+second charge for that same user's amount after reloading the browser.
+
+The endpoint requires a cookie session, exact configured origin, JSON body no
+larger than 4096 bytes, and allows 30 submission attempts per member per minute.
+The client cannot choose an owner, entry fee, ledger account, or LIVE mode.
+History responses are private/no-store and reject another member's cursor.
+
+Migration `20261023000100_test_bidding` adds immutable `Bid` records and TEST_FEES
+accounts/BID_FEE transfers. PostgreSQL guards require matching bid/fee pairs at
+commit. A bid's source account, auction fee, and destination must match, and a
+fee cannot be committed without its bid. Transaction locks serialize a member's
+submissions, enforce the bid limit, and prevent overdrafts. The database rechecks
+its clock when inserting: `opensAt <= now < closesAt`, with status SCHEDULED or
+OPEN. A failed bid rolls back the fee, including failures after fee insertion.
+
+```sh
+npm run test:bidding
+npm run test:wallet
+npm run wallet:check
+```
+
+Bidding integration tests create a disposable `bidding_test_<uuid>` schema, apply
+all migrations, use fictional users/local OTPs and test funds, and remove only
+that schema afterward. They exercise the real route handlers without a running
+server. Production database users, real SMS, and published prize balances are not
+used. Restart the dev server after generating the new Prisma models.
+
+Next: durable auction closing, unique-bid ranking, winner offers, and deadlines.
+No winner is selected automatically yet. Real deposits/withdrawals, provider
+callbacks, winner payments, and refunds remain unimplemented.
 
 ## Dependency notes
 

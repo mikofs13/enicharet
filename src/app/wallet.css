@@ -1,0 +1,10 @@
+.wallet-eyebrow { margin-top: 38px; }
+.wallet-balance { font-size: 1.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wallet-history-heading { display: flex; align-items: baseline; gap: 20px; justify-content: space-between; margin-bottom: 12px; }
+.wallet-history { list-style: none; margin: 0; padding: 0; }
+.wallet-history li { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+.wallet-history h3 { font-size: 1rem; font-weight: 550; margin: 0 0 8px; overflow-wrap: anywhere; }
+.wallet-history p { color: var(--muted); font-size: .8125rem; margin: 0 0 8px; }
+.wallet-history small { display: block; color: var(--muted); font-size: .6875rem; overflow-wrap: anywhere; }
+.wallet-amount { font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media(max-width: 740px) { .wallet-history li { flex-direction: column; gap: 12px; } .wallet-balance { font-size: 1.25rem; } }

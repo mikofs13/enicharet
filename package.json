@@ -14,11 +14,16 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:check": "tsx scripts/check-db.ts",
+    "db:seed:auctions": "tsx scripts/seed-auctions.ts",
     "user:admin": "tsx scripts/make-admin.ts",
     "test:auth": "node --conditions=react-server --import tsx scripts/test-auth.ts",
     "test:sms": "tsx --test scripts/sms.test.ts",
     "test:auctions": "tsx --test scripts/auctions.test.ts && node --conditions=react-server --import tsx scripts/test-auctions.ts",
-    "sms:inbox": "tsx scripts/sms-inbox.ts"
+    "sms:inbox": "tsx scripts/sms-inbox.ts",
+    "wallet:credit:test": "node --conditions=react-server --import tsx scripts/wallet-credit-test.ts",
+    "test:wallet": "tsx --test scripts/wallet.test.ts && node --conditions=react-server --import tsx scripts/test-wallet.ts",
+    "wallet:check": "node --conditions=react-server --import tsx scripts/check-wallet.ts",
+    "test:bidding": "tsx --test scripts/bidding.test.ts && node --conditions=react-server --import tsx scripts/test-bidding.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.11",

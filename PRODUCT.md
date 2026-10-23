@@ -34,7 +34,8 @@ No specific anti-references have been supplied.
 ## Design Principles
 
 - Make the current task and next action clear.
-- Show only implemented functionality; do not imply wallets or auctions work yet.
+- Show only implemented functionality; label test money clearly and do not imply
+  live payments, bid submission, or settlement work before implementation.
 - Keep money, payment deadlines, and user permissions explicit.
 - Use a consistent responsive interface for desktop and mobile browsers.
 

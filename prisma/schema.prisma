@@ -43,6 +43,8 @@ model User {
   updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
   sessions            Session[]
   accounts            Account[]
+  wallet              WalletAccount?
+  bids                Bid[]
 }
 
 model Session {
@@ -113,6 +115,7 @@ model Auction {
   createdAt            DateTime       @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
   images               AuctionImage[]
+  bids                 Bid[]
 
   @@index([status, opensAt])
   @@index([status, closesAt])
@@ -127,4 +130,73 @@ model AuctionImage {
   auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
 
   @@unique([auctionId, position])
+}
+
+enum WalletAccountKind {
+  USER
+  TEST_CLEARING
+  TEST_FEES
+}
+
+enum WalletTransferKind {
+  TEST_CREDIT
+  TEST_DEBIT
+  REVERSAL
+  BID_FEE
+}
+
+// TEST accounts only. Live payments need a separate, reviewed money environment.
+model WalletAccount {
+  id           String            @id @default(cuid())
+  key          String            @unique
+  userId       String?           @unique
+  user         User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  kind         WalletAccountKind
+  currency     String            @default("ETB")
+  mode         String            @default("TEST")
+  balanceMinor BigInt            @default(0)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  outgoing     WalletTransfer[]   @relation("TransferSource")
+  incoming     WalletTransfer[]   @relation("TransferDestination")
+}
+
+// One immutable row represents equal debit/credit entries, in the same currency.
+// SQL triggers apply the balance projection; application code cannot edit it.
+model WalletTransfer {
+  id                   String             @id @default(cuid())
+  operationKey         String             @unique
+  kind                 WalletTransferKind
+  amountMinor          BigInt
+  description          String
+  sourceId             String
+  destinationId        String
+  source               WalletAccount      @relation("TransferSource", fields: [sourceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  destination          WalletAccount      @relation("TransferDestination", fields: [destinationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reversalOfId         String?            @unique
+  reversalOf           WalletTransfer?    @relation("TransferReversal", fields: [reversalOfId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reversal             WalletTransfer?    @relation("TransferReversal")
+  bid                  Bid?
+  createdAt            DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([sourceId, createdAt, id])
+  @@index([destinationId, createdAt, id])
+}
+
+model Bid {
+  id            String         @id @default(cuid())
+  userId        String
+  auctionId     String
+  amountMinor   Int
+  entryFeeMinor Int
+  operationKey  String         @unique
+  feeTransferId String         @unique
+  mode          String         @default("TEST")
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  auction       Auction        @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  feeTransfer   WalletTransfer @relation(fields: [feeTransferId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([auctionId, userId, amountMinor])
+  @@index([userId, createdAt, id])
+  @@index([auctionId, amountMinor])
 }
