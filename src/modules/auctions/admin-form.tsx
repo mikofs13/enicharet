@@ -66,7 +66,7 @@ export function PublishAuction({ id, updatedAt }: { id: string; updatedAt: strin
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  return <section className="publish-panel"><h2>Ready to publish?</h2><p>Publishing makes this prize public and locks its details. Test-money bidding follows the schedule. Real payments and winner selection are not enabled.</p>
+  return <section className="publish-panel"><h2>Ready to publish?</h2><p>Publishing makes this prize public and locks its details. Test-money bidding follows the schedule; closing and offers require the settlement worker. Real payments are not enabled.</p>
     <button className="button" disabled={busy} onClick={async () => {
       setBusy(true); setError("");
       try {

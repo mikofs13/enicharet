@@ -8,12 +8,14 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: test-money bidding.**
+**Current milestone: TEST auction closing, offers, payments, and refunds.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
-transfer ledger, and private test-money bidding. Winner selection and real money
-are not implemented. Next is durable auction closing and winner offers.
+transfer ledger, private test-money bidding, durable closing jobs, winner offers,
+explicit TEST winner payments, reassignment, and fee refunds. Real money is not
+implemented. Next is notification delivery and administrator operations, before
+selecting and integrating any live payment provider.
 
 ## Completed work
 
@@ -260,6 +262,67 @@ against the owner's prize or account. Screenshot: `artifacts/my-bids-mobile.png`
 The temporary browser preview on port 3002 was stopped; existing servers were left
 alone. Restart the owner's dev server after this schema/client change.
 
+### 8. Closing, winner offers, and TEST settlement
+
+- Owner explicitly approved paying the winning amount from the TEST wallet.
+  Payment is a member action; the worker never auto-debits the proposed amount.
+- Added/applied migration `20261023000200_test_settlement` with `SettlementJob`,
+  immutable `AuctionSettlement` and `SettlementCandidate`, and guarded
+  `WinnerOffer` records. Existing auctions/bids/ledger history were preserved.
+- A separate Node worker discovers published auctions and processes persisted
+  closing/deadline schedules. It uses job row locks with SKIP LOCKED and auction
+  write locks to coordinate concurrent workers, bids, expiry, and payments.
+- Snapshot creation waits for in-flight bid transactions and stores all original
+  amounts with exactly one bid, ranked ascending. The database validates snapshot
+  completeness/ranking. Snapshot records/candidates are immutable, and candidates
+  cannot be appended in a later transaction.
+- Pending offers get the full configured payment window from actual issue time.
+  Expiry excludes every bid by that user for this auction, retaining the original
+  uniqueness snapshot. The account stays active and can bid elsewhere.
+- Candidates must currently be active verified users. Suspended/unverified users
+  are not selected. If none eligible remain, settlement moves to refunds.
+- The owned `/offers` page and GET API show only that member's offers. No SMS/email
+  offer notifications yet; users must check this page during the test phase.
+- The pay endpoint accepts `{}` only. The saved bid sets the payer and amount.
+  Wallet/job/auction locks and SQL deadline/payment-pair guards ensure one exact
+  winning-amount transfer and one PAID offer commit together. Paid-offer retries
+  return the original transfer. Insufficient funds do not expire an offer early.
+- A payment sets WINNER_CONFIRMED and completes the job. Public result data contains
+  only TEST mode, winning amount, and confirmation time; no phone, user id, name,
+  candidate ranking, or losing amounts are exposed.
+- Exhausted/no-unique candidates cause original BID_FEE reversals in batches of
+  25. Progress persists as REFUNDING, then REFUNDED. Unique original references
+  prevent duplicate refunds. No ledger rows are deleted.
+- A savepoint rolls back failed partial work while retaining generic error,
+  attempt count, and exponential retry (5–300 seconds). A crash/lost connection
+  rolls back the transaction and releases the job for another attempt.
+- `npm run auctions:worker` polls every five seconds in its own process.
+  `-- --once` performs one bounded batch and exits nonzero on retry/error.
+  No permanent worker/service or recurring desktop automation was installed.
+- A one-pass app-data run processed zero auctions, preserving future closing
+  times and leaving member funds/bids untouched.
+
+Important files: `src/modules/settlement/{service,api,pay-button}.ts(x)`,
+`scripts/settlement-worker.ts`, `scripts/test-settlement.ts`, `/offers` and its
+API handlers. Real prize fulfillment and provider money remain out of scope.
+
+Verification: isolated tests passed for original ranking, concurrent workers,
+deadlines, entire-user exclusion, other-auction eligibility, payment ownership/
+CSRF/amount tampering, payment retries, snapshot/offer immutability, public-result
+privacy, no-unique/all-failed refunds, 26-fee batch resumption, refund rollback/
+backoff recovery, suspension, and net-zero balances. Isolated wallet regressions,
+build/type checks, and lint also passed. The harness uses a disposable
+`settlement_test_<uuid>` schema, fictional phones, and local OTPs, then drops only
+that schema. No real SMS or member money is used.
+
+Final checks also passed the existing bidding suite and app ledger reconciliation
+(zero accounts/transfers and no mismatch). Browser verification covered the
+protected offers empty state and a 390px mobile view without horizontal overflow;
+preview saved to `artifacts/winner-offers-mobile.png`. Payment interactions were
+tested through real API/service handlers in isolation, not by paying from the
+owner's browser/account. The temporary port-3002 preview was stopped. No permanent
+worker is running; start `auctions:worker` separately to process due jobs.
+
 ## Available routes
 
 | Route | Purpose/access |
@@ -277,6 +340,9 @@ alone. Restart the owner's dev server after this schema/client change.
 | `/api/v1/me` | Current active verified user |
 | `/wallet` | Protected test balance and transaction history |
 | `/bids` | Protected personal bid history |
+| `/offers` | Protected personal winner offers and TEST payment action |
+| `/api/v1/offers` | GET owned offers with cursor pagination |
+| `/api/v1/offers/[id]/pay` | POST explicit TEST winning-amount payment |
 | `/api/v1/bids` | GET personal cursor-paginated bid history |
 | `/api/v1/auctions/[slug]/bids` | POST an authenticated test-money bid |
 | `/api/v1/wallet` | Protected GET current user's test balance |
@@ -331,46 +397,42 @@ Limitations of this evidence:
   milestone; the wallet integration harness exercises the real auth handlers.
 - The final auction milestone did not browser-test every admin form interaction
   with an administrator identity; protected API behavior was integration-tested.
-- There has been no production deployment, capacity/load test, payment test, or
-  full auction settlement test. Those features are absent.
+- There has been no production deployment, capacity/load test, or real-provider
+  payment test. TEST settlement is covered by isolated integration checks.
 - Do not send real SMS just to rerun ordinary tests: auth/auction integration
   scripts force local delivery inside their process without editing `.env.local`.
 
 ## Not implemented
 
 - Real deposits, withdrawals, withdrawal holds, or payment-provider integration.
-- Automatic auction state transitions and durable job scheduling.
-- Unique-bid ranking, winner offers, payment, reassignment, or fee refunds.
-- Public winner announcements and notification delivery beyond account OTPs.
+- SMS/email/push offer notifications and delivery tracking beyond account OTPs.
 - Auction cancellation/refund administration, user-management UI, or audit UI.
 - About/contact pages, customer-support tools, image uploads, or mobile apps.
 - Account recovery/phone changes and additional administrator protection.
 
-## Next milestone: auction closing and winner offers
+## Next milestone: notifications and administrator operations
 
-1. Choose a durable scheduling mechanism and add idempotent job/offer records.
-2. Close auctions using server/database time and coordinate with in-flight bid
-   transactions through the existing auction locks. The date label is not a job.
-3. Snapshot original amounts with exactly one bid and rank them ascending. Never
-   recalculate uniqueness after removing nonpaying users.
-4. Create a winner offer and payment deadline. Missing payment excludes all of
-   that user's bids from this auction only, then advances to the next originally
-   unique eligible user. Do not globally suspend the member.
-5. Resolve the winner's payment action before implementing its debit; no automatic
-   charge has been agreed. Keep test money explicit.
-6. Design auditable refunds if no eligible bidder remains. Preserve immutable
-   bid/ledger history and use reversing entries, not deletes.
-7. Test duplicate jobs, close/submit races, eligibility snapshots, payment/deadline
-   races, user exclusion, retries, and no-candidate behavior.
+1. Add a durable notification outbox in the same transaction as offer creation,
+   expiry/reassignment, winner confirmation, and refund completion.
+2. Choose/confirm delivery channels and preferences. Do not automatically send
+   test offer SMS through the live provider or consume credits without need.
+3. Add deduplicated delivery retries, delivery/error states, and a local transport
+   for tests. A duplicate notification must never repeat settlement actions.
+4. Add administrator visibility for job schedules, retries, failures, and refund
+   progress. Use audited actions, not direct ledger/bid mutations.
+5. Verify operational restart/recovery, deadline/payment lock-wait boundaries,
+   notification failure isolation, and large-auction snapshot performance.
+6. Decide production worker hosting and least-privilege DB roles; measure load.
+7. Select a payment provider and validate its support for this business before
+   any live deposit/withdrawal integration. Keep TEST and live funds separate.
 
 ## Following milestones
 
 1. **Bidding:** implemented with TEST funds; run regression tests when extending
    it and measure contention before claiming capacity.
-2. **Closing and winner offers:** durable idempotent worker, original unique-bid
-   eligibility snapshot, ranking, deadline offers, and per-auction user exclusion.
-3. **Winner payment and refunds:** confirmed payment action, deadline/payment
-   race handling, reassignment, no-candidate refunds, and auditable settlement.
+2. **Closing and winner offers:** implemented with durable jobs and TEST funds.
+3. **Winner payment and refunds:** implemented with TEST wallet payments/reversals;
+   future real-provider settlement still requires integration and verification.
 4. **Real money:** choose providers, verified/deduplicated webhooks, withdrawal
    workflow, reconciliation, operational limits, and failure handling.
 5. **Product completion:** announcements, support, about/contact pages, uploads,
@@ -395,6 +457,8 @@ npm run test:auth
 npm run test:auctions
 npm run test:wallet
 npm run test:bidding
+npm run test:settlement
+npm run auctions:worker -- --once
 npm run wallet:check
 ```
 
@@ -451,8 +515,9 @@ See `.env.example` and `README.md` for configuration names and setup instruction
 - **Authentication:** role/status checks must remain server-side and fresh.
   A database email field or Better Auth `Account.password` field does not mean
   email/password login is enabled.
-- **Publication versus jobs:** date labels do not implement lifecycle workers.
-  No bid or wallet functionality should be inferred from `OPEN` or other enums.
+- **Publication versus jobs:** date labels do not run settlement. The separate
+  `auctions:worker` process must run for closing, reassignment, and refunds. Its
+  persisted database jobs resume on restart; no permanent worker was installed.
 - **Images:** current remote images are unoptimized Next Image components, so
   image URLs are rendered without a server image-optimization fetch. Consider
   storage/host policies when adding uploads or optimization later.
@@ -473,7 +538,7 @@ See `.env.example` and `README.md` for configuration names and setup instruction
 ## Suggested prompt for another agent
 
 > Read AGENTS.md, PROJECT.md, PROGRESS.md, and README.md. Verify the current
-> repository state before editing. Continue with the auction closing/winner-offer milestone
+> repository state before editing. Continue with the notifications/admin-operations milestone
 > described in PROGRESS.md, keeping the TEST wallet ledger, phone-only Better Auth
 > login, and existing
 > auction rules intact. Read the relevant installed Next.js documentation, avoid

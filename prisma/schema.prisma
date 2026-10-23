@@ -27,6 +27,7 @@ enum AuctionStatus {
   REFUNDING
   CANCELLED
   FULFILLED
+  REFUNDED
 }
 
 model User {
@@ -116,6 +117,9 @@ model Auction {
   updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
   images               AuctionImage[]
   bids                 Bid[]
+  settlement           AuctionSettlement?
+  settlementJob        SettlementJob?
+  offers               WinnerOffer[]
 
   @@index([status, opensAt])
   @@index([status, closesAt])
@@ -136,6 +140,7 @@ enum WalletAccountKind {
   USER
   TEST_CLEARING
   TEST_FEES
+  TEST_PRIZE
 }
 
 enum WalletTransferKind {
@@ -143,6 +148,7 @@ enum WalletTransferKind {
   TEST_DEBIT
   REVERSAL
   BID_FEE
+  WINNER_PAYMENT
 }
 
 // TEST accounts only. Live payments need a separate, reviewed money environment.
@@ -176,6 +182,7 @@ model WalletTransfer {
   reversalOf           WalletTransfer?    @relation("TransferReversal", fields: [reversalOfId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   reversal             WalletTransfer?    @relation("TransferReversal")
   bid                  Bid?
+  winnerPayment        WinnerOffer?
   createdAt            DateTime           @default(now()) @db.Timestamptz(3)
 
   @@index([sourceId, createdAt, id])
@@ -195,8 +202,63 @@ model Bid {
   user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   auction       Auction        @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   feeTransfer   WalletTransfer @relation(fields: [feeTransferId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  candidate     SettlementCandidate?
 
   @@unique([auctionId, userId, amountMinor])
   @@index([userId, createdAt, id])
   @@index([auctionId, amountMinor])
+}
+
+enum WinnerOfferState {
+  PENDING
+  EXPIRED
+  PAID
+}
+
+model SettlementJob {
+  auctionId   String   @id
+  auction     Auction  @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nextRunAt   DateTime @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  attempts    Int      @default(0)
+  lastError   String?
+
+  @@index([completedAt, nextRunAt])
+}
+
+model AuctionSettlement {
+  auctionId     String   @id
+  auction       Auction  @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  snapshotAt    DateTime @default(now()) @db.Timestamptz(3)
+  transactionId BigInt   @default(dbgenerated("txid_current()"))
+  candidates    SettlementCandidate[]
+}
+
+model SettlementCandidate {
+  id         String            @id @default(cuid())
+  auctionId  String
+  settlement AuctionSettlement @relation(fields: [auctionId], references: [auctionId], onDelete: Restrict, onUpdate: Restrict)
+  bidId      String            @unique
+  bid        Bid               @relation(fields: [bidId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  rank       Int
+  offer      WinnerOffer?
+
+  @@unique([auctionId, rank])
+}
+
+model WinnerOffer {
+  id                String              @id @default(cuid())
+  auctionId         String
+  auction           Auction             @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  candidateId       String              @unique
+  candidate         SettlementCandidate @relation(fields: [candidateId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  state             WinnerOfferState    @default(PENDING)
+  offeredAt         DateTime            @default(now()) @db.Timestamptz(3)
+  expiresAt         DateTime            @db.Timestamptz(3)
+  paidAt            DateTime?           @db.Timestamptz(3)
+  paymentTransferId String?             @unique
+  paymentTransfer   WalletTransfer?     @relation(fields: [paymentTransferId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([auctionId, state])
+  @@index([state, expiresAt])
 }

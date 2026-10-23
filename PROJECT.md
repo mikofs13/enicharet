@@ -65,10 +65,10 @@ Duplicates must remain disqualified during reassignment: removing a nonpaying
 user must not turn a formerly duplicated amount into a new unique candidate.
 Preserve eligibility from the original closed auction.
 
-The existing project specification says to refund all entry fees for an auction
+The project specification refunds all entry fees for an auction
 if there are no unique bids or all eligible candidates fail to pay. Ordinary
-losing entry fees otherwise remain charged. These are intended settlement rules;
-settlement and refunds are not implemented yet.
+losing entry fees otherwise remain charged. These rules are implemented with
+TEST funds; real payment-provider refunds are not implemented.
 
 ### Example
 
@@ -102,8 +102,8 @@ The 1.00 bids stay disqualified.
 
 The following details are not final requirements yet:
 
-- The exact payment action for a winner: wallet payment, external checkout, or
-  another flow. Do not assume automatic debit of the winning amount.
+- The owner approved explicit payment from the winner's TEST wallet on 2026-10-23.
+  Never auto-debit a winning bid. Live payment-provider behavior is still undecided.
 - Cancellation, exceptional refunds, prize non-delivery, and dispute policies.
 
 ## 3. Accounts and authentication
@@ -139,7 +139,7 @@ is also available. Provider support and trial restrictions are described in
 | Bidding | Submit multiple bids and charge fixed fees within a time window | Test-money version implemented |
 | Wallet | Balance and transaction history | Test-money version implemented |
 | Payments | Real deposits and withdrawals | Planned |
-| Results | Winner announcements and payment deadlines | Planned |
+| Results | Winner offers, deadlines, test payments, and anonymized confirmed results | Test-money version implemented |
 | Support | Contact/support requests and responses | Planned |
 | Information | About us and contact us pages | Planned |
 | Mobile apps | Dedicated apps backed by shared services | Later |
@@ -178,8 +178,9 @@ Implemented safeguards:
 The protected `/wallet` view and `/api/v1/wallet` read APIs always label these
 funds `TEST`. Zero balances can be read without creating database accounts;
 accounts are created on the first trusted posting. The local test-credit command
-rejects production, CI, and Vercel environments. There are no public money-write,
-deposit, withdrawal, reversal, or transfer endpoints.
+rejects production, CI, and Vercel environments. There are no general-purpose
+public credit, deposit, withdrawal, reversal, or transfer endpoints. Authenticated
+bids and offer payments post only their server-defined TEST amounts.
 
 Real payments remain planned: provider webhook verification/deduplication,
 withdrawal holds, payout processing, and reconciliation against external funds.
@@ -208,7 +209,7 @@ a separate API framework is not required for the current milestone.
 | Authentication | Better Auth 1.7.11 phone-number plugin |
 | Phone parsing | libphonenumber-js |
 | SMS | Server-only SMS Ethiopia adapter, optional local development inbox |
-| Background jobs | Not implemented; worker area reserved |
+| Background jobs | PostgreSQL-backed settlement jobs and a separate Node worker |
 | Payment provider/mobile framework | Not selected |
 
 Versions above describe the current repository, not a recommendation to upgrade.
@@ -233,19 +234,54 @@ handlers, workers, and mobile clients can share them. Check permissions on the
 server; hiding controls in the browser is insufficient.
 
 Existing database models: `User`, `Session`, `Account`, `Verification`,
-`RateLimit`, `Auction`, `AuctionImage`, `WalletAccount`, `WalletTransfer`, and `Bid`.
-There are no winner-offer, withdrawal, or provider-payment models yet.
+`RateLimit`, `Auction`, `AuctionImage`, `WalletAccount`, `WalletTransfer`, `Bid`,
+`SettlementJob`, `AuctionSettlement`, `SettlementCandidate`, and `WinnerOffer`.
+There are no withdrawal or provider-payment models yet.
 
 ### Lifecycle
 
 The schema already declares `DRAFT`, `SCHEDULED`, `OPEN`, `CLOSING`,
 `AWAITING_PAYMENT`, `WINNER_CONFIRMED`, `REFUNDING`, `CANCELLED`, and `FULFILLED`.
-Only draft creation/editing and publishing to `SCHEDULED` are implemented as
-administrative transitions. Other enum values are preparation, not finished work.
+Admin transitions create/edit drafts and publish to `SCHEDULED`. The settlement
+worker handles `CLOSING`, `AWAITING_PAYMENT`, `REFUNDING`, and `REFUNDED`.
+Successful explicit test payment confirms `WINNER_CONFIRMED`. Cancellation and
+physical fulfillment administration remain future work.
 
 Public pages derive upcoming/open/closed labels from dates at request time.
 Bids accept SCHEDULED or OPEN auctions within their time window without requiring
-a scheduler. There is still no closing worker or winner selection.
+a scheduler. Closing, deadline reassignment, and refunds require the separate
+settlement worker to be running; Next.js request handling alone does not run jobs.
+
+### Test settlement and offers
+
+`npm run auctions:worker` polls durable database jobs every five seconds. It
+discovers published auctions, records their close time, and claims due jobs using
+transaction row locks and `SKIP LOCKED`. A crash rolls back the in-flight work;
+persisted schedules let another worker resume. Job errors retain generic retry
+metadata with a bounded backoff. `-- --once` supports one bounded processing run.
+
+At closing, the worker locks the auction, waits for in-flight bids, and stores a
+complete immutable ranking of originally unique amounts. Duplicates never become
+eligible during reassignment. Offers get a full payment window from their actual
+creation time. Expired offers exclude every bid by that user for this auction,
+without suspending their account or blocking other auctions. Candidates must be
+active, verified users when selected.
+
+`/offers` and its owned read API show offers without other users' information.
+The winner explicitly pays the server-determined amount from TEST funds. Offer
+identity provides idempotency: retries confirm the original payment, not another
+charge. Job, auction, and wallet locks coordinate expiry and payment; the database
+rechecks the deadline before accepting payment. No extra entry fee is charged.
+
+When candidates are exhausted, original entry fees are reversed in batches of 25.
+Unfinished batches persist as `REFUNDING`; completion becomes `REFUNDED`.
+Reversals reference the original immutable fee and cannot repeat. Failed batches
+roll back and retry rather than deleting history or forcing balances past limits.
+
+Confirmed public results show only the TEST winning amount and confirmation time,
+not names, phone numbers, user ids, other amounts, or the private ranking. Offer
+notifications are currently in-app only; no SMS/email is sent. Real prize handover
+and real money remain outside this test workflow.
 
 ### Time and scale
 

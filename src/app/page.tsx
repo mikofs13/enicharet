@@ -14,7 +14,7 @@ export default function Home() {
         <li><span>02</span><h2>Stand alone.</h2><p>Matching amounts are excluded. Lowest unique comes first.</p></li>
         <li><span>03</span><h2>Claim your possibility.</h2><p>Only the winner pays their bid amount, within the payment deadline.</p></li>
       </ol>
-      <p className="availability-note">Explore published prizes and try bidding with test funds when an auction opens. Real payments and winner selection are coming later.</p><Link className="text-link" href="/prizes">Browse prizes →</Link>
+      <p className="availability-note">Try bidding and winner offers with test funds. Real deposits, withdrawals, and prize handovers are not enabled.</p><Link className="text-link" href="/prizes">Browse prizes →</Link>
     </main>
     <footer className="site-footer">Enicharet <span>A little strategy. A little luck.</span></footer>
   </>;

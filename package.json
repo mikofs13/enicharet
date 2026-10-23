@@ -23,7 +23,9 @@
     "wallet:credit:test": "node --conditions=react-server --import tsx scripts/wallet-credit-test.ts",
     "test:wallet": "tsx --test scripts/wallet.test.ts && node --conditions=react-server --import tsx scripts/test-wallet.ts",
     "wallet:check": "node --conditions=react-server --import tsx scripts/check-wallet.ts",
-    "test:bidding": "tsx --test scripts/bidding.test.ts && node --conditions=react-server --import tsx scripts/test-bidding.ts"
+    "test:bidding": "tsx --test scripts/bidding.test.ts && node --conditions=react-server --import tsx scripts/test-bidding.ts",
+    "auctions:worker": "node --conditions=react-server --import tsx scripts/settlement-worker.ts",
+    "test:settlement": "node --conditions=react-server --import tsx scripts/test-settlement.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.11",

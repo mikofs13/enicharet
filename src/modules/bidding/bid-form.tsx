@@ -41,6 +41,6 @@ export function BidForm({ slug, feeMinor, balanceMinor }: { slug: string; feeMin
       {tooLow && !uncertain && <p className="field-hint">You need more test funds before submitting a bid. Real deposits are not enabled.</p>}
       <button className="button" type="submit" disabled={busy || (tooLow && !uncertain)}>{busy ? "Confirming…" : uncertain ? "Retry this same bid" : `Submit bid · ${money(feeMinor)} test fee`}</button>
     </form><p className="field-hint"><Link className="text-link" href="/bids">My bids →</Link> · <Link className="text-link" href="/wallet">My test wallet →</Link></p>
-    <p className="field-hint">Test funds have no cash value. Winner selection and prize payments are not implemented yet.</p>
+    <p className="field-hint">Test funds have no cash value. After closing, check <Link href="/offers">My offers</Link> for a test winning offer and payment deadline.</p>
   </section>;
 }

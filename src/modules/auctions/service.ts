@@ -5,7 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { AuctionError, requireRevision, validateAuction } from "./validation";
 
 const images = { orderBy: { position: "asc" as const } };
-const publicStatuses = ["SCHEDULED", "OPEN", "CLOSING", "AWAITING_PAYMENT", "WINNER_CONFIRMED", "REFUNDING", "FULFILLED"] as const;
+const publicStatuses = ["SCHEDULED", "OPEN", "CLOSING", "AWAITING_PAYMENT", "WINNER_CONFIRMED", "REFUNDING", "FULFILLED", "REFUNDED"] as const;
 
 export async function listAuctions(page: number, admin = false) {
   const db = getPrisma();

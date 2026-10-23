@@ -38,7 +38,7 @@ Run `npm start` after a successful build to serve the production application.
 
 Keep business rules inside modules so API routes and workers can share them.
 Accounts, auctions, the test-money wallet, and test bidding are implemented; real
-payments, winner selection, and settlement remain future work.
+payments and physical prize handover remain future work. Settlement uses TEST funds.
 
 ## Auction rules
 
@@ -278,7 +278,8 @@ change `.env.local`. Use a development database, as with the auth tests above.
 balanceMinor: "..." } }`. `GET /api/v1/wallet/transactions?before=...` returns
 `items` and `nextCursor`. Both require an active verified phone session, scope data
 to that session's user, and send private/no-store headers. JSON money uses string
-minor units; 10001 means 100.01 birr. No public money-write endpoint exists.
+minor units; 10001 means 100.01 birr. There is no general-purpose public wallet
+write endpoint; bids and offer payments post only their saved TEST amounts.
 
 Migration `20261022000100_test_wallet` adds two tables and database guards:
 `WalletAccount` holds test accounts/balance projections; each `WalletTransfer`
@@ -367,9 +368,73 @@ that schema afterward. They exercise the real route handlers without a running
 server. Production database users, real SMS, and published prize balances are not
 used. Restart the dev server after generating the new Prisma models.
 
-Next: durable auction closing, unique-bid ranking, winner offers, and deadlines.
-No winner is selected automatically yet. Real deposits/withdrawals, provider
-callbacks, winner payments, and refunds remain unimplemented.
+## Test settlement worker and winner offers
+
+Migration `20261023000200_test_settlement` adds durable `SettlementJob`, immutable
+`AuctionSettlement`/`SettlementCandidate` ranking snapshots, and `WinnerOffer`
+records with guarded PENDING → PAID/EXPIRED transitions. The owner approved
+explicit winning-amount payment from the TEST wallet. No automatic winner debit.
+
+After restarting your dev server for the new Prisma models, run the worker in a
+separate terminal:
+
+```sh
+npm run auctions:worker
+```
+
+It polls every five seconds and stops with Ctrl+C. No background worker is
+automatically installed or left running by the implementation agent. For a single
+bounded run, verification, and regressions:
+
+```sh
+npm run auctions:worker -- --once
+npm run test:settlement
+npm run test:wallet
+npm run test:bidding
+npm run wallet:check
+```
+
+The worker discovers newly published auctions and records their closing schedule.
+Job/auction row locks and `SKIP LOCKED` support concurrent processes. Work commits
+atomically; interrupted transactions release locks and remain due. A failed job
+rolls back to a savepoint and records generic `PROCESSING_FAILED`, an attempt
+count, and retry time (5-second exponential backoff capped at 300 seconds).
+`--once` exits nonzero when a job needs retry. Monitor `SettlementJob.lastError`
+and `attempts` in the database; no admin job-monitor interface exists yet.
+
+At closing the worker snapshots all original amounts appearing exactly once,
+ranked ascending. It never recomputes uniqueness after excluding a user. Each
+offer gets the configured full payment window from its creation time. Missing a
+deadline excludes that user's other amounts for this prize only. An inactive or
+unverified candidate is not offered a prize. If no eligible candidate remains,
+all entry fees reverse into their original wallets in resumable batches of 25.
+Refund failure (for example, a wallet at its technical balance cap) leaves the
+job retryable with no partial batch committed. Resolve the cause rather than
+editing ledger history. No-candidate completion uses auction status REFUNDED.
+
+Members check `/offers` or `GET /api/v1/offers?before=...` for their own offers.
+`POST /api/v1/offers/[id]/pay` accepts an empty JSON object `{}`; authenticated
+ownership and the saved offer determine the amount and payer. It uses the same
+origin, JSON/body-limit, and per-member attempt safeguards as bidding. Bidding
+and payment attempts share the current 30-per-minute limit. Wallet locks prevent
+overspending; payment and expiry share job/auction locks, and SQL validates the
+deadline again. A paid offer can be retried safely, returning its existing transfer.
+The payment and PAID offer must commit together; neither can be orphaned.
+
+`/prizes/[slug]` and its GET API expose a confirmed TEST result (winning amount
+and timestamp only), never bidder contact details or the candidate ranking.
+Offers are in-app notifications only; SMS/email offer delivery is not enabled.
+Without a running worker, closing, reassignment, and refunds wait in the database;
+the pay endpoint still rejects an expired deadline while the worker is offline.
+
+`test:settlement` creates a disposable `settlement_test_<uuid>` database schema,
+applies all migrations there, uses fictional phones/local OTPs/test funds, and
+drops only that schema afterward. It tests original uniqueness, duplicate workers,
+reassignment, deadlines, payment retries/ownership, refunds, failure recovery,
+privacy, and ledger consistency. No app users/prizes/balances or real SMS are used.
+
+Live deposits/withdrawals, provider callbacks, account recovery, production
+operations, and physical prize handover remain unimplemented.
 
 ## Dependency notes
 

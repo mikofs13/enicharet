@@ -5,6 +5,9 @@ export function money(amountMinor: number) {
 export function auctionPhase(auction: { status: string; opensAt: Date | string; closesAt: Date | string }, now = new Date()) {
   if (auction.status === "DRAFT") return "Draft";
   if (auction.status === "CANCELLED") return "Cancelled";
+  if (auction.status === "REFUNDED") return "Fees refunded";
+  if (auction.status === "REFUNDING") return "Refunding entry fees";
+  if (auction.status === "AWAITING_PAYMENT") return "Awaiting winner payment";
   if (["WINNER_CONFIRMED", "FULFILLED"].includes(auction.status)) return "Awarded";
   if (new Date(auction.closesAt) <= now) return "Closed";
   if (new Date(auction.opensAt) > now) return "Upcoming";
