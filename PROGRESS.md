@@ -1,6 +1,6 @@
 # Enicharet — implementation progress and agent handoff
 
-Last updated: 2026-10-23.
+Last updated: 2026-10-24.
 
 Read [PROJECT.md](PROJECT.md) for the complete product description and auction
 rules. This file records implementation state, important findings, and the next
@@ -8,16 +8,56 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: TEST auction closing, offers, payments, and refunds.**
+**Current milestone: temporary administrator TEST wallet funding.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
 transfer ledger, private test-money bidding, durable closing jobs, winner offers,
 explicit TEST winner payments, reassignment, and fee refunds. Real money is not
-implemented. Next is notification delivery and administrator operations, before
+implemented. Administrators can now add persistent TEST credits through a temporary
+admin page. Next is notification delivery and administrator operations, before
 selecting and integrating any live payment provider.
 
 ## Completed work
+
+### Temporary administrator wallet funding (2026-10-24)
+
+- `/admin/wallet-funding`, linked from `/admin` while enabled, credits the admin's
+  own wallet or an existing active verified account by phone number.
+- The amount is parsed into exact integer hundredths. A required reason appears
+  in wallet history and in the audit record. The page shows the issuing admin's
+  ten latest database credits, and a successful save returns the database balance.
+- `POST /api/v1/admin/wallet-funding` checks the session, fresh active ADMIN role,
+  same origin, JSON content type, a 4 KB body limit, and strict input fields.
+  The service rechecks/locks administrator permissions inside its transaction.
+- Ledger posting and the new immutable `AdminWalletCredit` audit commit together;
+  a failed audit leaves no transfer or balance change. The audit records actor,
+  recipient, transfer, reason, timestamp, and an administrator-scoped request key.
+- Duplicate and concurrent retries return the same transfer. Reusing a reference
+  for another recipient, amount, or reason fails. The form keeps the same request
+  after ambiguous network/server errors and locks its details for safe retries.
+- Requires `ADMIN_TEST_FUNDING_ENABLED="true"`, NODE_ENV=development, and no CI or
+  Vercel environment. The flag was enabled in ignored `.env.local`; `.env.example`
+  defaults to false. Restart the dev server after this schema/configuration change.
+- Migration `20261024000100_admin_test_funding` was applied to the configured DB.
+  It adds audit insert validation, foreign keys, uniqueness, and update/delete/
+  truncate rejection. No existing users were promoted or funded and no seed was run.
+- Disable the flag and restart to hide/disable the temporary tool. Later remove
+  the page/API while retaining ledger and audit data. Real deposits remain absent.
+- Verification: `npm run test:admin-funding`, `npm run test:wallet`, lint, and the
+  production build passed. Funding integration uses a disposable database schema
+  and fictional accounts/local OTPs, exercises the real route and ledger, checks
+  balances/retries/conflicts, origin/body/permission guards, suspended/unverified
+  recipients, immutable audit, rollback, reconciliation, disable/production guards,
+  then drops only its schema. No live SMS or app-wallet funding is used.
+- Browser verification on the existing local server confirmed the admin form,
+  own-wallet default, conditional account-phone field, and database empty state.
+  Preview: `artifacts/admin-wallet-funding.png`. No app credit was submitted.
+- Fixed the retained Prisma singleton after a model is added during Next dev:
+  compare current generated model delegates before reusing a cached client, and
+  retire an incompatible old client. This resolved the audit model being undefined
+  on the already-running server without stopping it. Isolated-test clients remain
+  reusable because they expose the same delegates.
 
 ### 1. Application and database foundation
 
@@ -406,7 +446,8 @@ Limitations of this evidence:
 
 - Real deposits, withdrawals, withdrawal holds, or payment-provider integration.
 - SMS/email/push offer notifications and delivery tracking beyond account OTPs.
-- Auction cancellation/refund administration, user-management UI, or audit UI.
+- Auction cancellation/refund administration, user-management UI, or general audit
+  UI. The temporary funding page shows only the issuing admin's recent credits.
 - About/contact pages, customer-support tools, image uploads, or mobile apps.
 - Account recovery/phone changes and additional administrator protection.
 

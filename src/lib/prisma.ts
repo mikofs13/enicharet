@@ -1,7 +1,7 @@
 import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -25,7 +25,13 @@ function createClient() {
 
 // Reuse the pool across Next.js development hot reloads.
 export function getPrisma(): PrismaClient {
-  const prisma = globalForPrisma.prisma ?? createClient();
+  const cached = globalForPrisma.prisma;
+  // Next dev preserves globals after prisma generate adds a model. Reuse only
+  // clients exposing every current delegate; otherwise the new model is undefined.
+  const current = cached && Object.values(Prisma.ModelName).every(name =>
+    `${name[0].toLowerCase()}${name.slice(1)}` in cached);
+  const prisma = current ? cached : createClient();
   globalForPrisma.prisma = prisma;
+  if (cached && cached !== prisma) void cached.$disconnect().catch(() => {});
   return prisma;
 }

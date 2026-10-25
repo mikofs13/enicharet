@@ -182,6 +182,17 @@ rejects production, CI, and Vercel environments. There are no general-purpose
 public credit, deposit, withdrawal, reversal, or transfer endpoints. Authenticated
 bids and offer payments post only their server-defined TEST amounts.
 
+The owner requested a temporary administrator funding tool with persistent database
+records, rather than seeded balances. `/admin/wallet-funding` and its admin-only
+POST API can credit the administrator's own wallet or an existing verified active
+account by phone. It requires local development and
+`ADMIN_TEST_FUNDING_ENABLED="true"`. The ledger credit and immutable
+`AdminWalletCredit` audit (actor, recipient, transfer, reason, timestamp) commit
+together. References are unique per administrator across all recipients; retries
+cannot duplicate a credit or change its recipient/amount/reason. Disable the flag
+and restart to remove access. Future removal must preserve ledger and audit rows.
+This is TEST money with no cash value, not a provider deposit or withdrawal.
+
 Real payments remain planned: provider webhook verification/deduplication,
 withdrawal holds, payout processing, and reconciliation against external funds.
 The local test-credit service is not a live payment or public money-posting API.
@@ -310,7 +321,8 @@ those features exist.
 Configuration lives in ignored `.env.local`. Document variable names and examples,
 never actual values. The important variables are `DATABASE_URL`, optional
 `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`,
-`AUTH_SESSION_TTL_SECONDS`, `AUTH_SMS_MODE`, and `SMSETHIOPIA_API_KEY`.
+`AUTH_SESSION_TTL_SECONDS`, `AUTH_SMS_MODE`, `SMSETHIOPIA_API_KEY`, and the temporary
+`ADMIN_TEST_FUNDING_ENABLED` switch.
 
 Do not copy credentials, real phone numbers, OTPs, session cookies, inbox contents,
 or customer records into handoff documents. The local project has been configured

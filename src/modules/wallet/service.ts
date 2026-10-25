@@ -42,9 +42,12 @@ export async function getWalletSnapshot(userId: string, before?: string) {
 
 type TestMovement = { userId: string; amountMinor: bigint; reference: string; direction: "credit" | "debit"; description: string };
 
-// Trusted local tooling/integration tests only. No public posting endpoint.
-// Future bid fees must share their database transaction with bid creation.
 export async function postTestMovement(input: TestMovement) {
+  return getPrisma().$transaction(tx => postTestMovementInTransaction(tx, input), { maxWait: 15000, timeout: 15000 });
+}
+
+// Trusted server callers only: permits an admin credit and its audit to commit together.
+export async function postTestMovementInTransaction(tx: Prisma.TransactionClient, input: TestMovement) {
   requireTestMoneyMode();
   const { userId, amountMinor, reference, direction } = input;
   const description = typeof input.description === "string" ? input.description.trim() : "";
@@ -52,7 +55,6 @@ export async function postTestMovement(input: TestMovement) {
   if (typeof reference !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,99}$/.test(reference)) throw new WalletError("INVALID_REFERENCE", "Use an operation reference of 8–100 letters, numbers, dots, colons, underscores, or hyphens.");
   if (description.length < 3 || description.length > 200) throw new WalletError("INVALID_DESCRIPTION", "Use a description of 3–200 characters.");
   if (!["credit", "debit"].includes(direction)) throw new WalletError("INVALID_DIRECTION", "Invalid money movement.");
-  return getPrisma().$transaction(async tx => {
     // Lock identity so a concurrent suspension/deletion cannot pass this check.
     const users = await tx.$queryRaw<{ status: string; phoneNumberVerified: boolean }[]>`SELECT "status", "phoneNumberVerified" FROM "User" WHERE "id" = ${userId} FOR SHARE`;
     if (!users[0] || users[0].status !== "ACTIVE" || !users[0].phoneNumberVerified) throw new WalletError("ACCOUNT_UNAVAILABLE", "An active verified account is required.", 403);
@@ -74,5 +76,4 @@ export async function postTestMovement(input: TestMovement) {
     if (direction === "credit" && balance + amountMinor > MAX_WALLET_MINOR) throw new WalletError("BALANCE_LIMIT", "The test wallet balance limit would be exceeded.", 409);
     const transfer = await tx.walletTransfer.create({ data: { operationKey, kind, amountMinor, description, sourceId, destinationId } });
     return { transferId: transfer.id, replayed: false };
-  }, { maxWait: 15000, timeout: 15000 });
 }

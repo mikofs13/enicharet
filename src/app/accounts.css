@@ -12,7 +12,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-geist-sans), Arial, sans-serif; }
 a { color: inherit; text-decoration: none; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
@@ -46,7 +46,7 @@ h2 { font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.
 .auth-form fieldset { padding: 0; border: 0; margin: 0; min-width: 0; }
 .field { margin-bottom: 21px; }
 .field label { display: block; margin-bottom: 9px; font-size: 0.8125rem; font-weight: 550; }
-.field input { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 4px; font-size: 1rem; }
+.field input, .field select { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 4px; font-size: 1rem; }
 .field input::placeholder { color: oklch(0.62 0.01 80); }
 .field input:focus-visible { outline-offset: 2px; }
 .password-control { position: relative; }

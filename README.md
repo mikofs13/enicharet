@@ -436,6 +436,43 @@ privacy, and ledger consistency. No app users/prizes/balances or real SMS are us
 Live deposits/withdrawals, provider callbacks, account recovery, production
 operations, and physical prize handover remain unimplemented.
 
+## Temporary administrator test funding
+
+Administrators can add database-backed TEST funds at `/admin/wallet-funding`,
+also linked from `/admin`. Choose **My own wallet** or **Another account**, enter
+the recipient's registered phone when needed, an amount in birr, and a reason.
+The balance and transaction history persist across page reloads and server restarts.
+The reason is visible to the recipient; keep sensitive information out of it.
+
+The migration has been applied to this workspace's configured database. For a
+different database, run `npm run db:deploy`. Enable the temporary feature locally:
+
+```dotenv
+ADMIN_TEST_FUNDING_ENABLED="true"
+```
+
+Restart `npm run dev` after changing the flag or applying the Prisma schema.
+Use the same origin/port as `BETTER_AUTH_URL` when opening the app. Production,
+CI, and Vercel environments reject this feature even if the flag is enabled.
+If your verified account does not yet have ADMIN access, the existing owner-run
+command is `npm run user:admin -- "YOUR_REGISTERED_PHONE_NUMBER"`.
+
+Each credit and its immutable `AdminWalletCredit` audit save in one transaction.
+The record includes the administrator, recipient, reason, time, and transfer.
+Retries use the same reference; after a connection error, use **Retry same credit**
+without reloading to confirm it safely. A new successful submission is a new credit.
+The page lists the issuing administrator's ten latest saved credits.
+
+Set `ADMIN_TEST_FUNDING_ENABLED="false"` and restart to disable it later. Preserve
+the ledger and audit table when removing the temporary UI/API. These credits have
+no cash value and do not represent real deposits. No balances or admin users are
+seeded automatically.
+
+`npm run test:admin-funding` checks the actual API, database ledger, permissions,
+idempotency, audit immutability, rollback, and environment guards in a disposable
+database schema using fictional accounts and local OTPs. It removes only that
+schema afterward, without funding app wallets or consuming SMS credits.
+
 ## Dependency notes
 
 The initial npm audit reports five high-severity findings in the development-only

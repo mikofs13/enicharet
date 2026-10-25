@@ -46,6 +46,8 @@ model User {
   accounts            Account[]
   wallet              WalletAccount?
   bids                Bid[]
+  creditsIssued       AdminWalletCredit[] @relation("CreditActor")
+  creditsReceived     AdminWalletCredit[] @relation("CreditRecipient")
 }
 
 model Session {
@@ -183,10 +185,27 @@ model WalletTransfer {
   reversal             WalletTransfer?    @relation("TransferReversal")
   bid                  Bid?
   winnerPayment        WinnerOffer?
+  adminCredit          AdminWalletCredit?
   createdAt            DateTime           @default(now()) @db.Timestamptz(3)
 
   @@index([sourceId, createdAt, id])
   @@index([destinationId, createdAt, id])
+}
+
+// Retained after the temporary funding UI is removed.
+model AdminWalletCredit {
+  id           String @id @default(cuid())
+  operationKey String @unique
+  actorId      String
+  recipientId  String
+  transferId   String @unique
+  reason       String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  actor        User @relation("CreditActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  recipient    User @relation("CreditRecipient", fields: [recipientId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transfer     WalletTransfer @relation(fields: [transferId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([createdAt, id])
 }
 
 model Bid {

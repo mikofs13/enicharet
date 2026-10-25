@@ -8,3 +8,7 @@
 .wallet-history small { display: block; color: var(--muted); font-size: .6875rem; overflow-wrap: anywhere; }
 .wallet-amount { font-size: .9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media(max-width: 740px) { .wallet-history li { flex-direction: column; gap: 12px; } .wallet-balance { font-size: 1.25rem; } }
+.funding-form { max-width: 540px; margin: 36px 0; }
+.funding-legend { font-size: 1.25rem; font-weight: 600; margin-bottom: 24px; }
+.funding-result { margin-top: 24px; overflow-wrap: anywhere; }
+.funding-history { margin-top: 52px; }
