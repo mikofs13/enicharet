@@ -1,6 +1,6 @@
 # Enicharet — project description
 
-Last updated: 2026-10-23.
+Last updated: 2026-10-27.
 
 This file describes the product, its rules, architecture, and intended scope.
 Read [PROGRESS.md](PROGRESS.md) for what actually works and what to build next.
@@ -140,6 +140,8 @@ is also available. Provider support and trial restrictions are described in
 | Wallet | Balance and transaction history | Test-money version implemented |
 | Payments | Real deposits and withdrawals | Planned |
 | Results | Winner offers, deadlines, test payments, and anonymized confirmed results | Test-money version implemented |
+| Notifications | Private inbox, unread/read states, durable delivery retries | In-app implemented; external delivery planned |
+| Operations | Auction jobs, worker health, refunds, delivery progress, audited retries | Admin monitor and restricted retry controls implemented |
 | Support | Contact/support requests and responses | Planned |
 | Information | About us and contact us pages | Planned |
 | Mobile apps | Dedicated apps backed by shared services | Later |
@@ -246,7 +248,9 @@ server; hiding controls in the browser is insufficient.
 
 Existing database models: `User`, `Session`, `Account`, `Verification`,
 `RateLimit`, `Auction`, `AuctionImage`, `WalletAccount`, `WalletTransfer`, `Bid`,
-`SettlementJob`, `AuctionSettlement`, `SettlementCandidate`, and `WinnerOffer`.
+`SettlementJob`, `AuctionSettlement`, `SettlementCandidate`, `WinnerOffer`,
+`AdminWalletCredit`, `NotificationOutbox`, `Notification`, `WorkerHeartbeat`, and
+`OperationRetryAudit`.
 There are no withdrawal or provider-payment models yet.
 
 ### Lifecycle
@@ -293,6 +297,37 @@ Confirmed public results show only the TEST winning amount and confirmation time
 not names, phone numbers, user ids, other amounts, or the private ranking. Offer
 notifications are currently in-app only; no SMS/email is sent. Real prize handover
 and real money remain outside this test workflow.
+
+### In-app notifications and monitoring
+
+Auction transactions insert `NotificationOutbox` events for new winner offers,
+expiry, confirmed payments, and completed refunds. One refund completion event
+is saved per participating user per auction, after all fee batches complete.
+Event keys prevent duplicates. The separate `notifications:worker` delivers events
+to the private `/notifications` inbox with row locks, unique event receipts, and
+retry backoff. Delivery does not call settlement/payment services or send SMS.
+Inbox reads are owned and paginated; marking read is idempotent and session/origin
+protected. Existing outcomes are not retroactively backfilled.
+
+`/admin/operations` and its admin-only read API show active, retrying, and completed
+settlement jobs, pending offer deadlines, fee refund counts, notification backlog,
+delivery errors, and worker poll timestamps. Workers record `WorkerHeartbeat`
+when polling; a timestamp is evidence of a past poll, not proof of continued health.
+Worker-health alerts are calculated at page/API load: missing polls, polls older
+than 30 seconds, work at least 60 seconds overdue, closed auctions without jobs,
+and outstanding items with at least three failures. These are in-app alerts;
+`operations:check` provides a machine-readable check, not an installed monitor.
+Restricted manual retries can advance a failed item's next scheduled attempt.
+They require an active verified ADMIN, a reason, and the observed attempt count.
+Job/event row locks coordinate workers; busy targets, stale requests, already-due
+work, completed items, future auctions, and active payment windows are rejected.
+The worker applies all normal rules afterward. No deadlines, balances, bid rules,
+delivery contents, error history, or attempt counts are overridden. The schedule
+change and immutable `OperationRetryAudit` commit atomically. Request references
+provide idempotency; only one manual retry per target failure attempt is allowed.
+Both workers must run separately from Next.js. Offer deadlines remain authoritative
+even when notification delivery is delayed. Notifications currently require a page
+refresh; push, external SMS delivery/preferences, and real prize handover are future work.
 
 ### Time and scale
 

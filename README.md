@@ -400,7 +400,7 @@ atomically; interrupted transactions release locks and remain due. A failed job
 rolls back to a savepoint and records generic `PROCESSING_FAILED`, an attempt
 count, and retry time (5-second exponential backoff capped at 300 seconds).
 `--once` exits nonzero when a job needs retry. Monitor `SettlementJob.lastError`
-and `attempts` in the database; no admin job-monitor interface exists yet.
+and `attempts` in the database or review them at `/admin/operations`.
 
 At closing the worker snapshots all original amounts appearing exactly once,
 ranked ascending. It never recomputes uniqueness after excluding a user. Each
@@ -472,6 +472,112 @@ seeded automatically.
 idempotency, audit immutability, rollback, and environment guards in a disposable
 database schema using fictional accounts and local OTPs. It removes only that
 schema afterward, without funding app wallets or consuming SMS credits.
+
+## In-app notifications and auction operations
+
+`/notifications` shows only the signed-in user's auction updates, with unread
+counts, read controls, and older-page navigation. New winner offers, missed
+deadlines, confirmed TEST payments, and completed fee refunds save durable
+`NotificationOutbox` events inside the auction transaction. Refund completion
+produces one notice per participant, even for multiple bids. Existing outcomes
+are not backfilled. No SMS/email/push delivery is enabled by this feature.
+
+Run both workers in separate terminals alongside `npm run dev`:
+
+```sh
+npm run auctions:worker
+npm run notifications:worker
+```
+
+Both poll every five seconds and stop with Ctrl+C. No daemon is automatically
+installed or left running. Bounded processing is also available:
+
+```sh
+npm run notifications:worker -- --once
+```
+
+Auction processing remains the auction worker's responsibility. The notification
+worker delivers in-app receipts only; it never repeats payments, reassignments,
+or refunds. Delivery receipts and the outbox delivered marker commit together.
+Row locks, unique event/receipt keys, and retries prevent duplicate inbox entries.
+Delivery failures retain generic `DELIVERY_FAILED`, attempt count, and an
+exponential retry delay from 5 seconds up to 300 seconds. `--once` returns nonzero
+when a retry is scheduled. A process crash rolls back uncommitted delivery work.
+
+Refresh the inbox for updates; there is no live push/polling badge yet. Payment
+deadlines apply even when delivery is late, so Offers is the authoritative place
+to check current payment eligibility. Marking a notice read never accepts an offer.
+
+Administrators can open `/admin/operations` from `/admin` to review active,
+retrying, and completed jobs, due work, pending winner deadlines, refunded fee
+counts, delivery backlog/failures, and last worker polls. Job lists are paginated;
+the delivery retry list shows the next ten failures. Poll timestamps record past
+activity and cannot guarantee the worker is currently alive. The monitor does not
+change bids, deadlines, or balances. Restricted manual retries can advance the
+next processing time of failed work, as described below.
+
+Private APIs: `GET /api/v1/notifications?before=...`,
+`POST /api/v1/notifications/[id]/read` with `{}`, and admin-only
+`GET /api/v1/admin/operations?view=active|failed|completed&after=...`.
+Reads use `private, no-store`; writes require the configured same origin, a
+verified active session, JSON, and a bounded body. Recipient identity always
+comes from the session. Clients cannot write event contents or delivery states.
+
+Migration `20261025000100_notifications` adds the outbox, inbox, and worker-poll
+records. New databases need `npm run db:deploy` and generated Prisma clients.
+`npm run test:settlement` now includes notification and operations checks in its
+disposable schema: real lifecycle events, concurrent delivery, injected delivery
+failure/retry recovery, inbox ownership/pagination/read idempotency, refund
+deduplication, admin permission checks, and no repeated financial transactions.
+It uses local OTPs and fictional accounts, without touching app balances or SMS.
+
+## Worker-health alerts and audited retries
+
+`/admin/operations` and its private admin GET API now include request-time alerts
+for missing worker polls, polls older than 30 seconds, work at least 60 seconds
+past its next scheduled attempt, closed published auctions missing a job, and
+unfinished work with at least three failures. Refresh to reevaluate alerts.
+These alerts are displayed inside the app; no external message or scheduled
+monitor is installed automatically.
+
+For a machine-readable health check:
+
+```sh
+npm run operations:check
+```
+
+Exit codes are 0 for no detected alerts, 1 for attention needed, and 2 when the
+database/health check failed. Output contains generic alerts and poll timestamps,
+not private records. The check does not start workers or process auctions.
+
+Failed jobs/deliveries whose next attempt is still in the future expose
+**Request earlier retry**. Investigate the cause and check that the worker is
+running, enter a reason, then choose **Schedule retry now**. This moves only that
+item's next attempt forward. It does not execute settlement or delivery in the
+HTTP request. Due work is already queued and cannot be repeatedly rescheduled.
+Busy worker locks, changed attempt counts, completed items, healthy work, future
+auctions, and unexpired winner payment windows are rejected. The reason, actor,
+target, failed attempt count, prior schedule, and new schedule are saved atomically
+in immutable `OperationRetryAudit` records. The latest 20 are shown on the page.
+
+`POST /api/v1/admin/operations/retry` accepts `kind` (`settlement` or
+`notification`), `id`, the observed `expectedAttempts`, `reason` (3–200 characters),
+and a stable `reference` (8–100 allowed identifier characters). It requires a
+current active verified ADMIN session, same origin, JSON, and a body of at most
+4 KB. Permissions are checked/locked again in the transaction. No caller may
+submit an arbitrary processing time, user, amount, or deadline. Error/attempt
+history is retained. Only one manual retry per target failure attempt is allowed.
+
+On a network/server error, **Confirm same retry** checks the original request
+without repeating the action. Keep the page open for that confirmation. If the
+target has changed, refresh and review its new status. Reasons are permanent
+audit data: do not include secrets or customer contact details.
+
+Migration `20261027000100_operation_retries` adds the audit table and database
+checks. The extended `test:settlement` suite includes health threshold unit tests
+and isolated database checks for concurrency, worker locks, stale requests,
+permission/origin/body guards, audit rollback/immutability, and unchanged financial
+records. No recovery requests are automatically submitted against app data.
 
 ## Dependency notes
 

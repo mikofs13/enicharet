@@ -6,9 +6,11 @@ process.once("SIGINT", () => stop.abort()); process.once("SIGTERM", () => stop.a
 async function main() {
   const { runSettlementBatch } = await import("../src/modules/settlement/service");
   const { getPrisma } = await import("../src/lib/prisma");
+  const { recordWorkerPoll } = await import("../src/modules/notifications/service");
   try {
     do {
       try {
+        await recordWorkerPoll("settlement");
         const results = await runSettlementBatch();
         console.log(JSON.stringify({ mode: "TEST", processed: results.length, outcomes: results }));
         if (process.argv.includes("--once") && results.includes("retry-scheduled")) process.exitCode = 1;

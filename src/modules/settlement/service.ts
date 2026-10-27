@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { BidError } from "@/modules/bidding/validation";
 import { WalletError } from "@/modules/wallet/money";
+import { queueOfferNotification, queueRefundNotifications } from "@/modules/notifications/service";
 
 export class SettlementError extends BidError {}
 const clock = async (tx: Prisma.TransactionClient) => (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0].now;
@@ -40,7 +41,10 @@ async function processJob(tx: Prisma.TransactionClient, auctionId: string) {
     if (pending && pending.expiresAt > now) {
       await tx.settlementJob.update({ where: { auctionId }, data: { nextRunAt: pending.expiresAt } }); return "awaiting-payment";
     }
-    if (pending) await tx.winnerOffer.update({ where: { id: pending.id }, data: { state: "EXPIRED" } });
+    if (pending) {
+      await tx.winnerOffer.update({ where: { id: pending.id }, data: { state: "EXPIRED" } });
+      await queueOfferNotification(tx, pending.id, "OFFER_EXPIRED");
+    }
     const expired = await tx.winnerOffer.findMany({ where: { auctionId, state: "EXPIRED" }, select: { candidate: { select: { bid: { select: { userId: true } } } } } });
     const excluded = expired.map(row => row.candidate.bid.userId);
     const next = await tx.settlementCandidate.findFirst({
@@ -49,6 +53,7 @@ async function processJob(tx: Prisma.TransactionClient, auctionId: string) {
     if (next) {
       await tx.auction.update({ where: { id: auctionId }, data: { status: "AWAITING_PAYMENT" } });
       const offer = await tx.winnerOffer.create({ data: { auctionId, candidateId: next.id, expiresAt: new Date(now.getTime() + auction.paymentWindowSeconds * 1000) } });
+      await queueOfferNotification(tx, offer.id, "OFFER_CREATED");
       await tx.settlementJob.update({ where: { auctionId }, data: { nextRunAt: offer.expiresAt, lastError: null } }); return "offer-created";
     }
     await tx.auction.update({ where: { id: auctionId }, data: { status: "REFUNDING" } });
@@ -65,6 +70,7 @@ async function processJob(tx: Prisma.TransactionClient, auctionId: string) {
     reversalOfId: fee.id, description: "Test entry fee refund: no eligible winner",
   } });
   if (await tx.walletTransfer.count({ where: { kind: "BID_FEE", bid: { auctionId }, reversal: null } }) === 0) {
+    await queueRefundNotifications(tx, auctionId, auction.title);
     await tx.auction.update({ where: { id: auctionId }, data: { status: "REFUNDED" } }); await finishJob(tx, auctionId); return "refunded";
   }
   await tx.settlementJob.update({ where: { auctionId }, data: { nextRunAt: await clock(tx), lastError: null } }); return "refund-batch";
@@ -121,6 +127,7 @@ export async function payWinnerOffer(userId: string, offerId: string) {
     if (offer.expiresAt <= await clock(tx)) throw new SettlementError("OFFER_EXPIRED", "This offer has expired.", 409);
     const transfer = await tx.walletTransfer.create({ data: { operationKey: `winner:${offerId}`, kind: "WINNER_PAYMENT", amountMinor, sourceId: wallet.id, destinationId: prize.id, description: "Test winning bid payment" } });
     await tx.winnerOffer.update({ where: { id: offerId }, data: { state: "PAID", paidAt: await clock(tx), paymentTransferId: transfer.id } });
+    await queueOfferNotification(tx, offerId, "WINNER_CONFIRMED");
     await tx.auction.update({ where: { id: owned.auctionId }, data: { status: "WINNER_CONFIRMED" } });
     await finishJob(tx, owned.auctionId);
     return { offerId, transferId: transfer.id, replayed: false };

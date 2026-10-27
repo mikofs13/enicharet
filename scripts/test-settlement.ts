@@ -114,6 +114,7 @@ async function main() {
     await close(retry.id); assert.ok((await runSettlementBatch()).includes("retry-scheduled"));
     const failedJob = await db.settlementJob.findUniqueOrThrow({ where: { auctionId: retry.id } }); assert.equal(failedJob.attempts, 1); assert.equal(failedJob.lastError, "PROCESSING_FAILED");
     assert.equal(await db.walletTransfer.count({ where: { kind: "REVERSAL", reversalOf: { bid: { auctionId: retry.id } } } }), 0);
+    assert.equal(await db.notificationOutbox.count({ where: { auctionId: retry.id } }), 0, "Rolled-back refunds must not announce success.");
     await postTestMovement({ userId: c.id, amountMinor: 1000n, direction: "debit", reference: "free-test-capacity", description: "Test refund capacity recovery" });
     await db.settlementJob.update({ where: { auctionId: retry.id }, data: { nextRunAt: new Date(0) } }); await run();
     assert.equal((await db.auction.findUniqueOrThrow({ where: { id: retry.id } })).status, "REFUNDED");
@@ -129,11 +130,15 @@ async function main() {
     }, { timeout: 30000 });
     await close(batch.id); assert.deepEqual(await run(1), ["refund-batch"]);
     assert.equal((await db.auction.findUniqueOrThrow({ where: { id: batch.id } })).status, "REFUNDING");
+    assert.equal(await db.notificationOutbox.count({ where: { auctionId: batch.id, kind: "REFUND_COMPLETED" } }), 0);
     assert.equal(await db.walletTransfer.count({ where: { kind: "BID_FEE", bid: { auctionId: batch.id }, reversal: null } }), 1);
     assert.deepEqual(await run(1), ["refunded"]);
+    assert.equal(await db.notificationOutbox.count({ where: { auctionId: batch.id, kind: "REFUND_COMPLETED" } }), 2, "One refund completion notice per participant, not per bid.");
     assert.equal(await db.walletTransfer.count({ where: { kind: "BID_FEE", bid: { auctionId: batch.id }, reversal: null } }), 0);
     assert.equal((await db.walletAccount.aggregate({ _sum: { balanceMinor: true } }))._sum.balanceMinor, 0n);
     assert.equal(await db.walletTransfer.count({ where: { kind: "WINNER_PAYMENT" } }), 1);
+    const { checkNotifications } = await import("./notification-checks");
+    await checkNotifications(db, control, users, prize.id, base);
     await db.user.update({ where: { id: b.id }, data: { status: "SUSPENDED" } });
     await assert.rejects(payWinnerOffer(b.id, next.id), { code: "ACCOUNT_UNAVAILABLE" });
     console.log("PASS: original ranking, duplicate workers, immutable snapshots, payment ownership/CSRF, real deadlines, user-scoped exclusion, payment races/replays, no-unique/all-failed refunds, multi-batch refunds, rollback/backoff recovery, privacy, and balanced ledger.");

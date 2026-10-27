@@ -16,6 +16,7 @@ async function AdminContent() {
     <p className="intro-copy">An overview of your Enicharet platform.</p>
     <dl className="account-details"><div><dt>Registered users</dt><dd>{users}</dd></div><div><dt>Auctions</dt><dd>{auctions}</dd></div></dl>
     <section className="next-section"><h2>Your auction desk.</h2><p>Create prize drafts, set entry rules, and publish a schedule.</p><Link className="button" href="/admin/auctions">Manage auctions ↗</Link></section>
+    <section className="next-section"><h2>Auction operations.</h2><p>Monitor closing jobs, pending payments, refund progress, and notification delivery.</p><Link className="button" href="/admin/operations">Monitor auctions ↗</Link></section>
     {adminFundingEnabled() && <section className="next-section"><h2>Test wallet funding.</h2><p>Add test funds to your own wallet or another verified account. Each credit is saved with an audit record.</p><Link className="button" href="/admin/wallet-funding">Add test funds ↗</Link></section>}
     <Link className="text-link" href="/account">Return to my account →</Link>
   </main></>;

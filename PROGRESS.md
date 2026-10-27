@@ -1,6 +1,6 @@
 # Enicharet — implementation progress and agent handoff
 
-Last updated: 2026-10-24.
+Last updated: 2026-10-27.
 
 Read [PROJECT.md](PROJECT.md) for the complete product description and auction
 rules. This file records implementation state, important findings, and the next
@@ -8,17 +8,108 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: temporary administrator TEST wallet funding.**
+**Current milestone: worker-health alerts and audited retry controls.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
 transfer ledger, private test-money bidding, durable closing jobs, winner offers,
 explicit TEST winner payments, reassignment, and fee refunds. Real money is not
 implemented. Administrators can now add persistent TEST credits through a temporary
-admin page. Next is notification delivery and administrator operations, before
-selecting and integrating any live payment provider.
+admin page. Private notification delivery, worker-health alerts, and a restricted
+admin operations monitor with audited retries are implemented. Next is production
+worker supervision and external monitoring, restart/recovery and load verification,
+external notification preferences/delivery, then live-provider readiness.
 
 ## Completed work
+
+### Worker health and audited manual retries (2026-10-27)
+
+- The admin monitor/API now calculate request-time alerts for missing/stale polls
+  (older than 30 seconds), jobs/deliveries at least 60 seconds overdue, closed
+  published auctions without jobs, and unfinished items with at least 3 failures.
+- `npm run operations:check` exposes generic JSON health output and exit statuses
+  0 healthy/no detected alerts, 1 attention, 2 check unavailable. It does not
+  process jobs or install a background monitor. Page alerts require refresh.
+- Failed unfinished jobs/deliveries in backoff can be scheduled earlier through
+  a reason-required inline form and `POST /api/v1/admin/operations/retry`.
+  The endpoint authenticates an active verified ADMIN, checks same origin, JSON,
+  a 4 KB limit, and strict fields. The service locks/rechecks administrator role.
+- Retry service uses the worker's job/auction lock order with `NOWAIT`, protects
+  observed attempt versions, and rejects busy targets, healthy/completed work,
+  already-due work, future auctions, and active winner payment windows. It only
+  advances nextRunAt/nextAttemptAt. The workers perform all actual processing.
+- The schedule change and immutable `OperationRetryAudit` commit together, with
+  actor, target, failure attempt, reason, old schedule, and new schedule. References
+  are idempotent; unique target/attempt pairs prevent repeated manual acceleration.
+  Error/attempt history, offers/deadlines, bids, event contents, and money are not
+  overridden. The admin page shows the latest 20 audit records.
+- Form retains ambiguous requests for safe confirmation; a new failure attempt
+  resets the control. The UI does not offer a retry for already-due work.
+- Migration `20261027000100_operation_retries` adds audit foreign keys, state
+  validation, uniqueness, and update/delete/truncate rejection. No app recovery
+  actions, balance changes, role grants, or sample audit records were submitted.
+- Verification: production build, type checking, lint, and the extended
+  `npm run test:settlement` suite passed. The isolated settlement harness exercises
+  actual retry routes/services and database locks, failure
+  injection, audit rollback, concurrency, stale references, ownership/permissions,
+  unchanged financial records, and health queries. Pure unit tests cover alert
+  boundaries and strict retry input. Test phones/OTPs remain local.
+- Migration `20261027000100_operation_retries` was applied to the configured DB.
+  Browser verification showed stale-worker alerts and the empty retry-audit state
+  using existing app data. Preview: `artifacts/worker-health-alerts.png`. Actual
+  recovery submissions were tested only in the disposable schema, because app
+  jobs had no current failures to retry.
+- `operations:check` returned exit 1 with stale-worker alerts, then exit 0 after
+  bounded `--once` polls from both worker CLIs. Both workers processed zero due
+  items; only heartbeat times changed. These processes exited afterward.
+- The temporary port 3000 dev preview for this milestone was stopped after
+  verification. No worker daemon, external alert service, or automation was left
+  running. Start Next.js and both workers separately for interactive testing.
+
+### In-app notifications and admin monitoring (2026-10-25)
+
+- Migration `20261025000100_notifications` adds `NotificationOutbox`, private
+  `Notification` receipts, and `WorkerHeartbeat`. The migration was applied to
+  the configured database without funding accounts or changing existing outcomes.
+- New offers, expired deadlines, successful winner payments, and completed
+  refunds create durable events in the same database transaction as their cause.
+  One refund-completion event per participant covers all their bids after all
+  refund batches finish. Unique event keys prevent duplicate lifecycle notices.
+  Existing outcomes are not retroactively backfilled.
+- `npm run notifications:worker` polls every five seconds, claims events with
+  `FOR UPDATE SKIP LOCKED`, and saves the inbox receipt and delivered marker
+  atomically. Failures roll back to a savepoint and retain `DELIVERY_FAILED`,
+  attempts, and exponential retry times from 5 to 300 seconds. Concurrent retries
+  cannot duplicate an inbox receipt or call financial/settlement operations.
+- `/notifications` and its private GET API provide owned cursor pagination,
+  unread counts, and readable event snapshots. The owned same-origin POST
+  `/api/v1/notifications/[id]/read` accepts `{}` and marks read idempotently.
+  Database guards prevent changing receipt ownership and resetting a read time.
+- Navigation/account links expose the inbox. Updates require refresh; there is
+  no automatic badge/polling, push, external SMS/email, or delivery preferences.
+  Original offer deadlines apply even when delivery is delayed; Offers shows the
+  current payable state. Reading a message never accepts/pays an offer.
+- `/admin/operations` and its protected GET API show paginated active/retrying/
+  completed jobs, pending payment deadlines, refund counts, notification backlog,
+  the next ten delivery failures, and last worker poll timestamps. A past poll
+  is not proof that a process remains alive. The monitor is read-only.
+- Both workers must run separately from Next.js. Worker CLI logs contain counts,
+  outcomes, and generic errors only. No service/daemon is installed automatically.
+- Verification: lint, type checking, production build, and the extended
+  `npm run test:settlement` suite passed. The disposable-schema suite checks real
+  lifecycle events, rollback without false notices, refund deduplication across
+  batches, concurrent delivery, injected delivery failure/backoff/recovery,
+  inbox privacy/pagination/read races, admin permissions, poll records, and ledger
+  consistency. No existing app balances, prize outcomes, or live SMS are used.
+- Browser checks verified the member inbox empty state, existing database job
+  schedules in the admin monitor, and the retrying-jobs filter. Screenshots:
+  `artifacts/notifications-inbox.png` and `artifacts/auction-operations.png`.
+  No sample notices were added to app accounts and no app bids/payments were made.
+- Both worker CLIs passed bounded `--once` checks against the configured database:
+  zero due jobs/events, with poll timestamps recorded. No daemon was left running.
+- The temporary Next dev preview started on port 3000 for this milestone was
+  stopped after browser verification. Start the app and both workers in separate
+  terminals for interactive testing; process state must be checked again next turn.
 
 ### Temporary administrator wallet funding (2026-10-24)
 
@@ -451,21 +542,19 @@ Limitations of this evidence:
 - About/contact pages, customer-support tools, image uploads, or mobile apps.
 - Account recovery/phone changes and additional administrator protection.
 
-## Next milestone: notifications and administrator operations
+## Next milestone: operation and external delivery readiness
 
-1. Add a durable notification outbox in the same transaction as offer creation,
-   expiry/reassignment, winner confirmation, and refund completion.
-2. Choose/confirm delivery channels and preferences. Do not automatically send
-   test offer SMS through the live provider or consume credits without need.
-3. Add deduplicated delivery retries, delivery/error states, and a local transport
-   for tests. A duplicate notification must never repeat settlement actions.
-4. Add administrator visibility for job schedules, retries, failures, and refund
-   progress. Use audited actions, not direct ledger/bid mutations.
-5. Verify operational restart/recovery, deadline/payment lock-wait boundaries,
-   notification failure isolation, and large-auction snapshot performance.
-6. Decide production worker hosting and least-privilege DB roles; measure load.
-7. Select a payment provider and validate its support for this business before
-   any live deposit/withdrawal integration. Keep TEST and live funds separate.
+1. Choose worker hosting/supervision and least-privilege database roles. Connect
+   operations:check to an external monitor if desired; in-app alerts now exist.
+2. Confirm external delivery channels/preferences and SMS message costs before
+   connecting outcome notifications to the live provider. Keep tests local.
+3. Expand audited recovery only for explicitly approved transitions. Restricted
+   failed-work scheduling is implemented; arbitrary ledger/bid or deadline
+   overrides remain prohibited.
+4. Verify process-restart recovery, payment/deadline lock-wait boundaries, and
+   large-auction snapshot/fanout performance under a defined workload.
+5. Select a provider and validate support for this business before live-money
+   deposits/withdrawals. Keep TEST and live money separate.
 
 ## Following milestones
 
@@ -579,7 +668,7 @@ See `.env.example` and `README.md` for configuration names and setup instruction
 ## Suggested prompt for another agent
 
 > Read AGENTS.md, PROJECT.md, PROGRESS.md, and README.md. Verify the current
-> repository state before editing. Continue with the notifications/admin-operations milestone
+> repository state before editing. Continue with the operation/external-delivery readiness milestone
 > described in PROGRESS.md, keeping the TEST wallet ledger, phone-only Better Auth
 > login, and existing
 > auction rules intact. Read the relevant installed Next.js documentation, avoid

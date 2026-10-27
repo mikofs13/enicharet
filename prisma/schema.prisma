@@ -48,6 +48,9 @@ model User {
   bids                Bid[]
   creditsIssued       AdminWalletCredit[] @relation("CreditActor")
   creditsReceived     AdminWalletCredit[] @relation("CreditRecipient")
+  notificationEvents  NotificationOutbox[]
+  notifications       Notification[]
+  operationRetries    OperationRetryAudit[]
 }
 
 model Session {
@@ -122,6 +125,7 @@ model Auction {
   settlement           AuctionSettlement?
   settlementJob        SettlementJob?
   offers               WinnerOffer[]
+  notificationEvents   NotificationOutbox[]
 
   @@index([status, opensAt])
   @@index([status, closesAt])
@@ -241,6 +245,7 @@ model SettlementJob {
   completedAt DateTime? @db.Timestamptz(3)
   attempts    Int      @default(0)
   lastError   String?
+  retries     OperationRetryAudit[]
 
   @@index([completedAt, nextRunAt])
 }
@@ -280,4 +285,78 @@ model WinnerOffer {
 
   @@index([auctionId, state])
   @@index([state, expiresAt])
+}
+
+enum NotificationKind {
+  OFFER_CREATED
+  OFFER_EXPIRED
+  WINNER_CONFIRMED
+  REFUND_COMPLETED
+}
+
+model NotificationOutbox {
+  id            String @id @default(cuid())
+  eventKey      String @unique
+  userId        String
+  auctionId     String
+  kind          NotificationKind
+  title         String
+  body          String
+  href          String
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  nextAttemptAt DateTime @default(now()) @db.Timestamptz(3)
+  attempts      Int @default(0)
+  deliveredAt   DateTime? @db.Timestamptz(3)
+  lastError     String?
+  user          User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  auction       Auction @relation(fields: [auctionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  notification  Notification?
+  retries       OperationRetryAudit[]
+
+  @@index([deliveredAt, nextAttemptAt])
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String @id @default(cuid())
+  eventId   String @unique
+  userId    String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  readAt    DateTime? @db.Timestamptz(3)
+  event     NotificationOutbox @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  user      User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, createdAt, id])
+  @@index([userId, readAt])
+}
+
+model WorkerHeartbeat {
+  name       String @id
+  lastSeenAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+enum OperationRetryKind {
+  SETTLEMENT
+  NOTIFICATION
+}
+
+model OperationRetryAudit {
+  id                  String @id @default(cuid())
+  operationKey        String @unique
+  actorId             String
+  kind                OperationRetryKind
+  settlementJobId     String?
+  notificationEventId String?
+  expectedAttempts    Int
+  reason              String
+  previousRunAt       DateTime @db.Timestamptz(3)
+  scheduledFor        DateTime @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  actor               User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  settlementJob       SettlementJob? @relation(fields: [settlementJobId], references: [auctionId], onDelete: Restrict, onUpdate: Restrict)
+  notificationEvent   NotificationOutbox? @relation(fields: [notificationEventId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([settlementJobId, expectedAttempts])
+  @@unique([notificationEventId, expectedAttempts])
+  @@index([createdAt, id])
 }
