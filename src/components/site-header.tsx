@@ -1,15 +1,12 @@
-import Link from "next/link";
-import { LogoutButton } from "@/modules/accounts/logout-button";
+import { Suspense } from "react";
+import { headers } from "next/headers";
+import { getSessionUser } from "@/modules/accounts/session";
+import { SiteNavigation } from "./site-navigation";
 
-export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
-  return (
-    <header className="site-header">
-      <Link className="wordmark" href="/" aria-label="Enicharet home">enicharet<span aria-hidden="true">.</span></Link>
-      <nav aria-label="Main navigation">
-        <Link href="/prizes">Prizes</Link>
-        {signedIn ? <><Link href="/offers">Offers</Link><Link href="/notifications">Notifications</Link><Link href="/bids">My bids</Link><Link href="/wallet">Wallet</Link><Link href="/account">My account</Link><LogoutButton /></> :
-          <><Link href="/login">Log in</Link><Link className="button button-small" href="/register">Create account</Link></>}
-      </nav>
-    </header>
-  );
+async function SessionHeader() {
+  const user = await getSessionUser(await headers());
+  return <SiteNavigation signedIn={user?.status === "ACTIVE"} />;
+}
+export function SiteHeader({ signedIn }: { signedIn?: boolean }) {
+  return signedIn === undefined ? <Suspense fallback={<SiteNavigation signedIn={false} />}><SessionHeader /></Suspense> : <SiteNavigation signedIn={signedIn} />;
 }

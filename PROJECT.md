@@ -342,9 +342,11 @@ contention before making scalability claims or deciding to split services.
 
 ## 7. Design direction
 
-The owner selected a bold, premium style: charcoal surfaces, warm gold accents,
-Geist typography, strong headings, and clear forms. Continue the existing design
-instead of replacing it. See [DESIGN.md](DESIGN.md) and [PRODUCT.md](PRODUCT.md).
+The owner approved the Studio direction on 2026-10-27: cobalt blue, apricot,
+cool light surfaces and deep navy dark surfaces, Geist typography, strong
+headings, an editorial split hero, and illustrated prize stages. Appearance offers
+Light, Dark, and System, with the preference saved on the device. Preserve this
+approved direction. See [DESIGN.md](DESIGN.md) and [PRODUCT.md](PRODUCT.md).
 
 Support keyboard navigation, visible focus, descriptive labels, accessible error
 and pending states, readable contrast, and responsive layouts. Explain entry fees

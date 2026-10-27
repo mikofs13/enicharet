@@ -8,7 +8,7 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: worker-health alerts and audited retry controls.**
+**Current milestone: approved Studio interface and appearance themes.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
@@ -21,6 +21,36 @@ worker supervision and external monitoring, restart/recovery and load verificati
 external notification preferences/delivery, then live-provider readiness.
 
 ## Completed work
+
+### Studio interface and Light / Dark / System (2026-10-27)
+
+- Implemented the owner's approved first design direction: cobalt and apricot,
+  strong Geist headings, a split homepage hero, featured prize, related prize
+  rows, and a clear explanation of fees and winner payments.
+- Homepage and prize cards use actual published database records and links.
+  Missing images use clearly labeled, category-specific illustrations; supplied
+  database images continue to render. No sample auctions replace real records.
+- Shared tokens in `src/app/studio.css` restyle public, account, wallet, bidding,
+  offer, notification, and administration surfaces. The header has active links,
+  session-aware navigation, an accessible mobile menu, and an appearance selector.
+- Light, Dark, and System preferences persist locally and synchronize across tabs.
+  A static first-paint script sets the effective theme before hydration; System
+  follows the device appearance. The current-page selector also works if storage
+  is unavailable. Existing authentication and financial services were unchanged.
+- Updated PRODUCT.md, DESIGN.md, PROJECT.md, and README.md for the approved style.
+- Browser checks covered real public listings, theme persistence after reload and
+  navigation, mobile menu links/Escape focus, and desktop/tablet/mobile layouts
+  at 1440, 820, 375, and 320 pixels. Screenshots: `artifacts/studio-home-light.png`,
+  `artifacts/studio-home-dark.png`, `artifacts/studio-home-mobile.png`, and
+  `artifacts/studio-prizes-tablet.png`.
+- Private-page browser verification remains limited by an expired login session.
+  An attempted disposable-schema preview did not start successfully; its schema,
+  fictional prize, and temporary helpers were removed. No application users,
+  balances, bids, or outcomes were changed for visual QA. No migration is needed.
+- Final lint, type checking, and production build passed. A final preview restart
+  refused browser connections, so the last narrow-card illustration sizing fix
+  was source-reviewed and build-checked rather than captured again. Temporary
+  preview processes were stopped; run `npm run dev` for local review.
 
 ### Worker health and audited manual retries (2026-10-27)
 

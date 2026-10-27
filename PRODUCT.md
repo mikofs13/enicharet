@@ -24,8 +24,9 @@ an account; a cookie holds the session until it expires or the user logs out.
 
 ## Brand Personality
 
-The user selected a bold and premium direction for account pages. Forms should
-remain clear, direct, and trustworthy while using confident typography and contrast.
+The user approved the Studio design preview on 2026-10-27: a crisp prize
+marketplace with cobalt and apricot, confident typography, paired phone imagery,
+and a light/dark theme system. Forms remain clear, direct, and trustworthy.
 
 ## Anti-references
 
@@ -38,6 +39,7 @@ No specific anti-references have been supplied.
   live payments, bid submission, or settlement work before implementation.
 - Keep money, payment deadlines, and user permissions explicit.
 - Use a consistent responsive interface for desktop and mobile browsers.
+- Support Light, Dark, and System appearance with a saved device preference.
 
 ## Accessibility & Inclusion
 

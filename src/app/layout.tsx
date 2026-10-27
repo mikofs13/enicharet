@@ -5,6 +5,9 @@ import "./accounts.css";
 import "./auctions.css";
 import "./wallet.css";
 import "./notifications.css";
+import "./studio.css";
+import { themeInitScript } from "@/lib/theme";
+import { SiteFooter } from "@/components/site-footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,9 +28,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><a className="skip-link" href="#main-content">Skip to content</a>{children}</body>
+      <head><script dangerouslySetInnerHTML={{ __html: themeInitScript }} /></head>
+      <body className="min-h-full flex flex-col"><a className="skip-link" href="#main-content">Skip to content</a>{children}<SiteFooter /></body>
     </html>
   );
 }

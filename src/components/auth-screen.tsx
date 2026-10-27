@@ -4,7 +4,7 @@ import { AuthForm } from "@/modules/accounts/auth-form";
 export function AuthScreen({ mode }: { mode: "login" | "register" }) {
   const registering = mode === "register";
   return <>
-    <SiteHeader />
+    <SiteHeader signedIn={false} />
     <main id="main-content" className="auth-layout">
       <section className="auth-intro" aria-label="Welcome to Enicharet">
         <p className="eyebrow">A little strategy. A little luck.</p>
@@ -20,6 +20,5 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
         <AuthForm />
       </section>
     </main>
-    <footer className="site-footer">Enicharet <span>Lowest unique bid auctions</span></footer>
   </>;
 }
