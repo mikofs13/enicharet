@@ -17,6 +17,9 @@ npm run dev
 
 Open http://localhost:3000. The app includes phone OTP accounts, administrator
 prize management, public prize browsing, a test-money wallet, and private test bids.
+The public prize collection is the homepage (`/`). Opening a prize requires login;
+successful phone verification returns to the collection. The former `/prizes`
+collection URL redirects to `/`. A How it works guide follows the prize grid.
 The approved Studio interface includes responsive navigation and a saved
 sun/moon appearance toggle in the header, with System as the default and a monitor
 button to restore it. Navigation transitions respect reduced-motion settings. Design references and

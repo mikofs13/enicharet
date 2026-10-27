@@ -16,7 +16,7 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
       <section className="auth-panel" aria-labelledby="form-title">
         <p className="eyebrow">{registering ? "Start here" : "Welcome back"}</p>
         <h2 id="form-title">Your number. Your account.</h2>
-        <p className="panel-copy">Enter your phone number. We’ll send a code to verify it and log you in. New here? Your account is created after verification.</p>
+        <p className="panel-copy">Enter your phone number. We’ll send a code to verify it and log you in, then return you to the prize collection. New here? Your account is created after verification.</p>
         <AuthForm />
       </section>
     </main>

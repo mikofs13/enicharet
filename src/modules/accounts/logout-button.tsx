@@ -14,7 +14,7 @@ export function LogoutButton() {
     try {
       const result = await authClient.signOut();
       if (result.error) throw new Error("Logout failed");
-      router.replace("/login");
+      router.replace("/");
       router.refresh();
     } catch {
       setError(true);

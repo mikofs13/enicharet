@@ -8,7 +8,7 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: approved Studio interface and appearance themes.**
+**Current milestone: public prize collection homepage and gated prize details.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
@@ -21,6 +21,28 @@ worker supervision and external monitoring, restart/recovery and load verificati
 external notification preferences/delivery, then live-provider readiness.
 
 ## Completed work
+
+### Collection homepage and prize login flow (2026-10-27)
+
+- Replaced the separate landing page with the existing database-backed prize
+  collection at `/`, accessible whether signed in or signed out. Pagination now
+  uses `/?page=...`; `/prizes` redirects to the new home, preserving valid pages.
+- Prize detail pages run the existing verified-user/active-account guard before
+  fetching the prize. Signed-out clicks and direct detail URLs lead to `/login`.
+  Successful OTP verification returns to `/`, where signed-in users can open prizes.
+  Logout also returns to the public collection. No arbitrary redirect URL accepted.
+- Updated collection navigation, all-prizes/back links, account/bid empty states,
+  footer links, and auth-page instructions. Added a How it works anchor beside the
+  collection introduction and a guide beneath the grid, including payment deadlines,
+  duplicate amounts, fees, reassignment, and test-only limitations.
+- No authentication service, financial rule, API permission, or database schema changed.
+- Verification: lint, type checking, and production build passed. Signed-out
+  production browser checks verified the real collection at `/`, prize-card login
+  redirect, legacy pagination redirect, How it works/back anchors, and no horizontal
+  overflow at 320px. Screenshot: `artifacts/collection-homepage.png` (viewport crop).
+  Fresh SMS verification and signed-in detail viewing were not exercised in-browser;
+  the existing verified-user guard and changed success destination were inspected.
+  Temporary preview was stopped after verification.
 
 ### Appearance toggle and navigation motion (2026-10-27)
 

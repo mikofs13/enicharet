@@ -22,7 +22,7 @@ async function AccountContent() {
       <section className="next-section"><p className="eyebrow">Test wallet</p><h2>See your balance and history.</h2><p>Use test funds to bid on open prizes. Real deposits and withdrawals are coming later.</p><Link className="button" href="/wallet">Open test wallet ↗</Link> <Link className="text-link" href="/bids">My bids →</Link></section>
       <section className="next-section"><h2>Your winner offers.</h2><p>Check your offers and pay a winning amount from your test wallet before its deadline.</p><Link className="button" href="/offers">View winner offers ↗</Link></section>
       <section className="next-section"><h2>Your auction updates.</h2><p>Read winner offers, expired deadlines, test payment confirmations, and completed refund notices.</p><Link className="text-link" href="/notifications">Open notifications →</Link></section>
-      <section className="next-section"><h2>A place for your possibilities.</h2><p>Browse published prizes and review their entry rules.</p><Link className="text-link" href="/prizes">Browse prizes →</Link></section>
+      <section className="next-section"><h2>A place for your possibilities.</h2><p>Browse published prizes and review their entry rules.</p><Link className="text-link" href="/">Browse prizes →</Link></section>
       {user.role === "ADMIN" && <Link className="button" href="/admin">Open administration <span aria-hidden="true">↗</span></Link>}
     </main>
   </>;
@@ -31,3 +31,4 @@ async function AccountContent() {
 export default function AccountPage() {
   return <Suspense fallback={<main className="account-page" role="status">Loading your account…</main>}><AccountContent /></Suspense>;
 }
+

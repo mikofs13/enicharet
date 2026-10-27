@@ -132,9 +132,9 @@ is also available. Provider support and trial restrictions are described in
 
 | Area | Intended functionality | Current status |
 | --- | --- | --- |
-| Home | Explain the model and link to prizes/accounts | Implemented |
+| Home (`/`) | Public prize collection, pagination, and How it works | Implemented |
 | Account access | Phone OTP registration/login, session, logout | Implemented |
-| Prize collection | Public list and prize details | Implemented |
+| Prize details (`/prizes/[slug]`) | Verified active account required; signed-out visits lead to login | Implemented |
 | Auction administration | Draft creation/editing, rules, publishing | Implemented |
 | Bidding | Submit multiple bids and charge fixed fees within a time window | Test-money version implemented |
 | Wallet | Balance and transaction history | Test-money version implemented |
@@ -349,6 +349,11 @@ Light and Dark through a sun/moon switch, defaulting to System with an explicit
 reset control. Save manual preferences on the device and respect reduced-motion
 preferences for navigation and interaction transitions. Preserve this
 approved direction. See [DESIGN.md](DESIGN.md) and [PRODUCT.md](PRODUCT.md).
+
+The separate marketing homepage has been removed. The collection is the main
+route `/` for everyone, with a How it works link beside its introduction and a
+guide beneath the prizes. `/prizes` redirects to `/`, preserving valid pagination.
+Opening a prize requires login; successful phone verification returns to `/`.
 
 Support keyboard navigation, visible focus, descriptive labels, accessible error
 and pending states, readable contrast, and responsive layouts. Explain entry fees

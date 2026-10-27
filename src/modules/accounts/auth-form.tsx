@@ -110,7 +110,7 @@ export function AuthForm() {
         setPending(false);
         return;
       }
-      router.replace("/account");
+      router.replace("/");
       router.refresh();
     } catch {
       setError("Could not connect. Check your connection and try again.");

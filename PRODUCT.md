@@ -39,6 +39,9 @@ No specific anti-references have been supplied.
   live payments, bid submission, or settlement work before implementation.
 - Keep money, payment deadlines, and user permissions explicit.
 - Use a consistent responsive interface for desktop and mobile browsers.
+- The public homepage is the prize collection. Opening a prize requires login;
+  successful verification returns to the collection at `/`. A How it works guide
+  is available directly on that page.
 - Support Light, Dark, and System appearance with a saved device preference.
 
 ## Accessibility & Inclusion

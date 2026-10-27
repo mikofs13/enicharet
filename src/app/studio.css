@@ -171,6 +171,9 @@ a, button, input, select, textarea { scroll-margin: 24px; }
 .page-heading { margin: 24px 0 36px; }
 .page-heading h1, .desk-heading h1 { font-size: 3.5rem; }
 .page-heading .intro-copy { max-width: 63ch; }
+.collection-help-link { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; margin-top: 8px; }
+#how-it-works { scroll-margin-top: 28px; }
+.how-section > .field-hint { margin-top: 24px; }
 .collection-caption { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; font-size: .8125rem; color: var(--muted); border-top: 1px solid var(--border); padding: 20px 0; }
 .prize-grid { gap: 28px; }
 .prize-card { background: var(--surface); border-radius: var(--radius); }

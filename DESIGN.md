@@ -32,9 +32,11 @@ labels. Landing hero follows the approved “Think small. Dream big.” hierarch
 
 ## Layout and components
 
-Split landing hero: story and cobalt action on the left, a rounded featured prize
-surface on the right. Compact related-prize rows follow, then a three-step guide.
-Collection uses product cards; account/history/admin screens retain clear lists
+The public homepage is the prize collection, replacing the split landing hero.
+A compact heading and How it works anchor lead into the prize grid; a three-step
+guide follows the prizes and pagination. Opening a prize requires login, which
+returns to the homepage after verification. Old `/prizes` collection links redirect
+to `/`. Collection uses product cards; account/history/admin screens retain clear lists
 and dividers. Shared controls have 10px radii and main surfaces 18px radii.
 
 Use the auction's saved image when supplied. Otherwise use a clearly labelled
