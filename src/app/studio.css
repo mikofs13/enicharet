@@ -69,8 +69,17 @@ a, button, input, select, textarea { scroll-margin: 24px; }
 .main-nav > a[aria-current="page"] { color: var(--foreground); font-weight: 700; }
 .site-header .main-nav .text-button { font-size: .8125rem; }
 .menu-toggle { display: none; }
-.theme-control { display: inline-flex; flex-shrink: 0; }
-.theme-control select { color: var(--foreground); background: var(--surface); border: 1px solid var(--input-border); padding: 10px 26px 10px 13px; border-radius: 30px; font-size: .8125rem; min-height: 42px; max-width: 110px; cursor: pointer; }
+.theme-control { display: inline-flex; flex-shrink: 0; gap: 4px; align-items: center; }
+.theme-toggle, .theme-system { color: var(--muted); background: transparent; border: 1px solid transparent; min-height: 44px; cursor: pointer; border-radius: 24px; }
+.theme-toggle { width: 44px; position: relative; border-color: var(--input-border); background: var(--surface); color: var(--foreground); }
+.theme-toggle svg { width: 20px; height: 20px; position: absolute; top: 11px; left: 11px; }
+.theme-moon { opacity: 0; transform: rotate(-45deg) scale(.6); }
+.theme-toggle[aria-checked="true"] .theme-sun { opacity: 0; transform: rotate(45deg) scale(.6); }
+.theme-toggle[aria-checked="true"] .theme-moon { opacity: 1; transform: rotate(0) scale(1); }
+.theme-system { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; font-size: .75rem; }
+.theme-system svg { width: 16px; height: 16px; }
+.theme-system[aria-pressed="true"] { color: var(--accent); background: var(--stage); }
+.theme-toggle:hover, .theme-system:hover { background: var(--stage); color: var(--foreground); }
 .site-footer { width: min(1184px, calc(100% - 80px)); display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 16px 24px; padding: 28px 0 24px; font-size: .75rem; margin-top: 44px; }
 .footer-brand { font-size: 1.25rem; font-weight: 750; letter-spacing: -.065em; color: var(--foreground); }
 .footer-brand span { color: var(--accent); }
@@ -283,7 +292,7 @@ a, button, input, select, textarea { scroll-margin: 24px; }
   .wordmark { font-size: 1.375rem; }
   .site-header { gap: 8px; }
   .brand-dot { width: 6px; height: 6px; }
-  .theme-control select { max-width: 85px; padding-left: 8px; }
+  .theme-control { gap: 0; }
   .menu-toggle { padding: 10px; gap: 6px; }
   .studio-story h1, .home-loading h1 { font-size: 3.125rem; }
   .studio-prize-row { gap: 14px; }
@@ -293,3 +302,26 @@ a, button, input, select, textarea { scroll-margin: 24px; }
   .prize-card .art-devices { transform: scale(.8); }
 }
 @media (prefers-reduced-motion: reduce) { .button:active:not(:disabled) { transform: none; } }
+
+/* Keep navigation and state changes quick, without blocking input or animating layout. */
+@media (prefers-reduced-motion: no-preference) {
+  body, .site-header, .site-footer, .auth-panel, .notice, .wallet-summary,
+  .prize-card, .studio-spotlight, input, select, textarea {
+    transition: background-color 200ms cubic-bezier(.22,1,.36,1), color 200ms cubic-bezier(.22,1,.36,1), border-color 200ms cubic-bezier(.22,1,.36,1);
+  }
+  a, button { transition: color 160ms cubic-bezier(.22,1,.36,1), background-color 160ms cubic-bezier(.22,1,.36,1), border-color 160ms cubic-bezier(.22,1,.36,1), transform 160ms cubic-bezier(.22,1,.36,1); }
+  .theme-toggle svg { transition: opacity 180ms cubic-bezier(.22,1,.36,1), transform 220ms cubic-bezier(.22,1,.36,1); }
+  .main-nav.is-open { animation: menu-arrive 180ms cubic-bezier(.22,1,.36,1); }
+  @keyframes menu-arrive { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (hover: hover) {
+    .studio-prize-row:hover .row-arrow, .studio-actions .button:hover > span { transform: translate(2px,-2px); }
+    .row-arrow, .studio-actions .button > span { transition: transform 180ms cubic-bezier(.22,1,.36,1); }
+  }
+}
+@media (max-width: 740px) {
+  .theme-system { width: 44px; padding: 8px; }
+  .theme-system span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

@@ -345,7 +345,9 @@ contention before making scalability claims or deciding to split services.
 The owner approved the Studio direction on 2026-10-27: cobalt blue, apricot,
 cool light surfaces and deep navy dark surfaces, Geist typography, strong
 headings, an editorial split hero, and illustrated prize stages. Appearance offers
-Light, Dark, and System, with the preference saved on the device. Preserve this
+Light and Dark through a sun/moon switch, defaulting to System with an explicit
+reset control. Save manual preferences on the device and respect reduced-motion
+preferences for navigation and interaction transitions. Preserve this
 approved direction. See [DESIGN.md](DESIGN.md) and [PRODUCT.md](PRODUCT.md).
 
 Support keyboard navigation, visible focus, descriptive labels, accessible error

@@ -22,6 +22,25 @@ external notification preferences/delivery, then live-provider readiness.
 
 ## Completed work
 
+### Appearance toggle and navigation motion (2026-10-27)
+
+- Replaced the appearance dropdown with an accessible sun/moon switch. System
+  is the default until a manual preference is saved; the adjacent System/monitor
+  button restores automatic mode. Its pressed state indicates system-following.
+- Retained first-paint theme setup, cross-tab synchronization, OS change handling,
+  and current-page operation when storage is blocked.
+- Added a 220ms main-content route entrance using the Web Animations API and
+  pathname changes, without resetting form state or delaying links. The observer
+  streams under Suspense for Next.js dynamic-route prerender compatibility.
+- Added brief theme/control color transitions, a menu reveal, and subtle arrow
+  feedback. Reduced-motion disables CSS animation and route entrances, and cancels
+  an active entrance when the preference changes. No animation library added.
+- Verification: lint, type checking, and production build passed. Production
+  browser checks confirmed system default, manual toggle, reload persistence,
+  System reset, menu navigation, and no horizontal overflow at 320px. Console
+  contained no errors. Reduced-motion behavior was source-reviewed. Screenshot:
+  `artifacts/studio-theme-toggle.png`. Temporary production preview was stopped.
+
 ### Studio interface and Light / Dark / System (2026-10-27)
 
 - Implemented the owner's approved first design direction: cobalt and apricot,

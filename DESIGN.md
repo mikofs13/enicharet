@@ -49,6 +49,14 @@ layouts and provides an expandable navigation menu with Escape and link dismissa
 
 Buttons expose pending and disabled states. Errors are announced accessibly.
 Focus rings remain visible. Navigation uses real links, and logout is a button.
-Appearance offers Light, Dark, and System. A localStorage preference applies
-across pages and tabs; an early static script prevents theme flashes. System mode
-follows OS changes. Without storage, the current-page choice still works.
+Appearance defaults to System. A sun/moon switch toggles dark mode; the adjacent
+System button (monitor icon on mobile) restores automatic appearance. Its pressed
+state indicates that the device theme is being followed. Saved manual choices
+apply across pages and tabs; an early static script prevents theme flashes.
+Without storage, the current-page choice still works.
+
+Navigation uses a 220ms fade and 6px upward settling motion on the main content,
+without remounting forms, intercepting links, or delaying interaction. Theme colors,
+controls, and menu reveals transition in 160–220ms with decelerating easing.
+Reduced-motion preferences disable CSS and route animations, including when
+the preference changes during an active route animation.

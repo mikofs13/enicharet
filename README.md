@@ -18,7 +18,8 @@ npm run dev
 Open http://localhost:3000. The app includes phone OTP accounts, administrator
 prize management, public prize browsing, a test-money wallet, and private test bids.
 The approved Studio interface includes responsive navigation and a saved
-Light / Dark / System appearance selector in the header. Design references and
+sun/moon appearance toggle in the header, with System as the default and a monitor
+button to restore it. Navigation transitions respect reduced-motion settings. Design references and
 theme tokens are documented in [DESIGN.md](DESIGN.md).
 
 ## Verification
