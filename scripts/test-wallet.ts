@@ -32,7 +32,7 @@ async function main() {
       const sql = (await readFile(`prisma/migrations/${name}/migration.sql`, "utf8")).replace('CREATE SCHEMA IF NOT EXISTS "public";', "");
       await control.query(sql);
     }
-    db = new PrismaClient({ adapter: new PrismaPg({ connectionString, options: `-c search_path=${schema}`, max: 5 }, { schema }) });
+    db = new PrismaClient({ transactionOptions: { maxWait: 15_000 }, adapter: new PrismaPg({ connectionString, options: `-c search_path=${schema}`, max: 5 }, { schema }) });
     Object.assign(globalThis, { prisma: db });
     const { postTestMovement, getWallet, getWalletHistory, getWalletSnapshot } = await import("../src/modules/wallet/service");
     const { GET: balanceApi } = await import("../src/app/api/v1/wallet/route");
@@ -140,3 +140,4 @@ main().catch((error: unknown) => {
   }
   console.error(message.replace(/postgres(?:ql)?:\/\/\S+/g, "[redacted database URL]")); process.exitCode = 1;
 });
+

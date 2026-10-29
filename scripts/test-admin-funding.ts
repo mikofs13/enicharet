@@ -29,7 +29,7 @@ async function main() {
     for (const name of (await readdir("prisma/migrations")).filter(name => /^\d/.test(name)).sort()) {
       await control.query((await readFile(`prisma/migrations/${name}/migration.sql`, "utf8")).replace('CREATE SCHEMA IF NOT EXISTS "public";', ""));
     }
-    db = new PrismaClient({ adapter: new PrismaPg({ connectionString, options: `-c search_path=${schema}`, max: 5 }, { schema }) });
+    db = new PrismaClient({ transactionOptions: { maxWait: 15_000 }, adapter: new PrismaPg({ connectionString, options: `-c search_path=${schema}`, max: 5 }, { schema }) });
     Object.assign(globalThis, { prisma: db });
     const { POST } = await import("../src/app/api/v1/admin/wallet-funding/route");
     const { addAdminFunds } = await import("../src/modules/wallet/admin-funding");
@@ -128,3 +128,4 @@ main().catch((error: unknown) => {
   }
   console.error(message.replace(/postgres(?:ql)?:\/\/\S+/g, "[redacted database URL]")); process.exitCode = 1;
 });
+

@@ -1,6 +1,6 @@
 # Enicharet — implementation progress and agent handoff
 
-Last updated: 2026-10-27.
+Last updated: 2026-10-29.
 
 Read [PROJECT.md](PROJECT.md) for the complete product description and auction
 rules. This file records implementation state, important findings, and the next
@@ -8,7 +8,7 @@ work. Source files are authoritative if this snapshot becomes stale.
 
 ## Current position
 
-**Current milestone: public prize collection homepage and gated prize details.**
+**Current milestone: complete test-money user journey verified.**
 
 The app has phone OTP accounts, protected member/admin access, admin prize drafts,
 five published prize listings, and a protected test-money wallet with an immutable
@@ -21,6 +21,29 @@ worker supervision and external monitoring, restart/recovery and load verificati
 external notification preferences/delivery, then live-provider readiness.
 
 ## Completed work
+
+### Full user journey and database acquisition reliability (2026-10-29)
+
+- Completed the browser journey in an isolated app copy/schema: public collection,
+  gated prize, local OTP, redirect to `/`, signed-in prize details, test fee-only bid,
+  worker-created offer, explicit TEST payment, wallet history, reload persistence,
+  logout, and protected-page denial afterward. No live SMS or real money used.
+- Found Prisma P2028 transaction-acquisition failures during initial browser login
+  and an unexpected 500 in the first settlement run. The app and disposable test
+  clients now wait up to 15 seconds to acquire a transaction instead of the 2-second
+  default. Active-transaction timeout remains unchanged. Restart existing dev
+  servers so cached Prisma clients pick up the change.
+- Verified the browser fixture's 100.00 credit minus 5.00 entry fee minus 1.25 winner
+  payment equals 93.75 TEST birr. Asserted one fee/payment and net-zero ledger.
+- Bidding, wallet, mocked SMS, admin funding, and the settlement/notification/retry
+  regression suites passed. Settlement includes real deadline expiry, skipping all
+  of a nonpaying user's bids for that prize, preserved duplicate disqualification,
+  no-unique/all-failed refunds, races, rollback/recovery, and permissions.
+- See [JOURNEY-VERIFICATION.md](JOURNEY-VERIFICATION.md) for steps, evidence, and
+  limits. Temporary preview processes, schema, copied app, and OTP inbox removed.
+  Next milestone remains worker hosting/supervision and external monitoring.
+- Final `npm run lint`, `npm run typecheck`, and `npm run build` passed after
+  cleanup and the acquisition-wait fix.
 
 ### Collection homepage and prize login flow (2026-10-27)
 

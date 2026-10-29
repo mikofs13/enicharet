@@ -35,6 +35,12 @@ npm run build
 
 Run `npm start` after a successful build to serve the production application.
 
+The complete test-money journey and regression evidence are recorded in
+[JOURNEY-VERIFICATION.md](JOURNEY-VERIFICATION.md). Restart a running development
+server after the 2026-10-29 database acquisition-wait fix to replace its cached
+Prisma client. Transaction acquisition now waits up to 15 seconds; the existing
+active-transaction timeout is unchanged.
+
 ## Project structure
 
 - `src/app`: Pages, layouts, and API route handlers.

@@ -20,7 +20,12 @@ function createClient() {
     idleTimeoutMillis: 30_000,
   });
 
-  return new PrismaClient({ adapter });
+  return new PrismaClient({
+    adapter,
+    // Hosted database wake-ups and TLS setup can exceed Prisma's 2s default.
+    // Bound connection acquisition without extending an active transaction.
+    transactionOptions: { maxWait: 15_000 },
+  });
 }
 
 // Reuse the pool across Next.js development hot reloads.

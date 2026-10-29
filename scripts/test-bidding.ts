@@ -25,7 +25,7 @@ async function main() {
     await control.connect(); await control.query(`CREATE SCHEMA "${schema}"`); created = true;
     await control.query(`SET search_path TO "${schema}"`);
     for (const name of (await readdir("prisma/migrations")).filter(name => /^\d/.test(name)).sort()) await control.query((await readFile(`prisma/migrations/${name}/migration.sql`, "utf8")).replace('CREATE SCHEMA IF NOT EXISTS "public";', ""));
-    db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString(), options: `-c search_path=${schema}`, max: 5 }, { schema }) });
+    db = new PrismaClient({ transactionOptions: { maxWait: 15_000 }, adapter: new PrismaPg({ connectionString: url.toString(), options: `-c search_path=${schema}`, max: 5 }, { schema }) });
     Object.assign(globalThis, { prisma: db });
     const { auth } = await import("../src/modules/accounts/auth");
     const { postTestMovement, getWallet } = await import("../src/modules/wallet/service");
@@ -145,3 +145,4 @@ main().catch((error: unknown) => {
   for (const key of ["DATABASE_URL", "DIRECT_URL", "BETTER_AUTH_SECRET", "SMSETHIOPIA_API_KEY"]) { const value = process.env[key]; if (value) message = message.split(value).join("[redacted]"); }
   console.error(message.replace(/postgres(?:ql)?:\/\/\S+/g, "[redacted database URL]")); process.exitCode = 1;
 });
+
